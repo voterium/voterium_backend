@@ -7,6 +7,7 @@ use std::{env, fs};
 pub struct Claims {
     pub sub: String,
     pub exp: usize,
+    pub salt: String,
 }
 
 pub async fn validate_jwt(req: &HttpRequest) -> Result<Claims, ActixError> {

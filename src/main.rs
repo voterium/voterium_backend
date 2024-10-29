@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     // Initialize logging
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     // Get the database URL from the environment variable
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -41,6 +41,9 @@ async fn main() -> std::io::Result<()> {
     .expect("Failed to create votes table");
 
     let data = web::Data::new(pool);
+    let state = routes::AppState {
+        backend_salt: env::var("BACKEND_SALT").expect("BACKEND_SALT must be set"),
+    };
 
     // Start the HTTP server
     HttpServer::new(move || {
@@ -50,6 +53,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors) // Apply the CORS middleware
             .app_data(data.clone())
+            .app_data(web::Data::new(state.clone()))
             .service(
                 web::resource("/vote")
                     .route(web::post().to(routes::vote))
