@@ -1,12 +1,12 @@
 mod auth;
 mod counting;
 mod models;
-mod routes;
+mod handlers;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use dotenv::dotenv;
-use sqlx::SqlitePool;
+// use sqlx::SqlitePool;
 use std::env;
 use env_logger::Env;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -62,13 +62,24 @@ async fn main() -> std::io::Result<()> {
             // .app_data(data.clone())
             .app_data(web::Data::new(state.clone()))
             .service(
-                web::resource("/vote")
-                    .route(web::post().to(routes::vote))
+                web::scope("/voting")
+                    .service(handlers::vote)
+                    .service(handlers::results)
             )
-            .service(
-                web::resource("/results")
-                    .route(web::get().to(routes::results))
-            )
+            //         .service(
+            //             web::resource("/results")
+            //                 .route(web::get().to(routes::results))
+            //         )
+            // )
+
+            // .service(
+            //     web::resource("/vote")
+            //         .route(web::post().to(routes::vote))
+            // )
+            // .service(
+            //     web::resource("/results")
+            //         .route(web::get().to(routes::results))
+            // )
     })
     .bind("127.0.0.1:8080")? // Bind to localhost on port 8080
     .run()

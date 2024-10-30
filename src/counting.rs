@@ -34,6 +34,8 @@ use rustc_hash::FxHashMap;
 use memmap2::{Mmap};
 use memchr::{memchr, memrchr};
 use crate::models::{VoteCount, CLVote};
+use log::{info, warn};
+
 
 
 pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
@@ -99,7 +101,7 @@ pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_1 - total {:?}  -  open and buffer file: {:?}, parse lines and collect votes {:?}, process votes into latest_votes {:?}, count votes {:?}",
+    info!("count_votes_1 - total {:?}  -  open and buffer file: {:?}, parse lines and collect votes {:?}, process votes into latest_votes {:?}, count votes {:?}",
             duration_total, duration_read, duration_parse, duration_process, duration_count);
 
     Ok(vote_counts)
@@ -160,7 +162,7 @@ pub fn count_votes_2() -> Result<Vec<VoteCount>, Box<dyn std::error::Error>> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_2 - total {:?}  -  open and buffer file: {:?}, parse lines and collect votes {:?}, process votes into latest_votes {:?}, count votes {:?}",
+    info!("count_votes_2 - total {:?}  -  open and buffer file: {:?}, parse lines and collect votes {:?}, process votes into latest_votes {:?}, count votes {:?}",
              duration_total, duration_read, duration_parse_setup, duration_process, duration_count);
 
     Ok(vote_counts)
@@ -231,7 +233,7 @@ pub fn count_votes_3() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_3 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_3 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
              duration_total, duration_read, duration_process, duration_count);
 
     Ok(vote_counts)
@@ -322,7 +324,7 @@ pub fn count_votes_4() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_4 - total {:?}  -  open and buffer file: {:?}, count lines {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_4 - total {:?}  -  open and buffer file: {:?}, count lines {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_count_lines, duration_process, duration_count
     );
 
@@ -401,7 +403,7 @@ pub fn count_votes_5() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_5 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_5 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 
@@ -479,7 +481,7 @@ pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_6 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_6 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 
@@ -622,7 +624,7 @@ pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_7 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_7 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 
@@ -708,7 +710,7 @@ pub fn count_votes_8() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_8 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_8 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 
@@ -749,7 +751,7 @@ pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
         let last_new_line_index = match find_new_line_pos(&actual_buf) {
             Some(index) => index,
             None => {
-                println!("No new line found in the read buffer");
+                warn!("No new line found in the read buffer");
                 bytes_not_processed += n_bytes_read;
                 if bytes_not_processed == buf.len(){
                     panic!("No new line found in the read buffer");
@@ -818,7 +820,7 @@ pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    println!("count_votes_9 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_9 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 

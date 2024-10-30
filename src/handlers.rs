@@ -1,12 +1,13 @@
 use crate::auth::{gen_random_b64_string, validate_jwt};
 use crate::models::{AppState, Vote, CLVote, VLVote};
 use crate::counting::{count_votes_1, count_votes_2, count_votes_3, count_votes_4, count_votes_5, count_votes_6, count_votes_7, count_votes_8, count_votes_9};
-use actix_web::{web, Error, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, Error, HttpRequest, HttpResponse};
 use chrono::Utc;
 use std::fs::OpenOptions;
 use std::io::Write;
 use blake2::{Blake2b, Digest, digest::consts::U12};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use log::info;
 
 type Blake2b96 = Blake2b<U12>;  // 96 bytes = 12 * 8 bits
 
@@ -37,6 +38,7 @@ fn hash_user_id(
 
 use std::time::Instant;
 
+#[post("/vote")]
 pub async fn vote(
     app_state: web::Data<AppState>,
     vote: web::Json<Vote>,
@@ -81,12 +83,13 @@ pub async fn vote(
 
     // Log total time for /vote function
     let total_duration = start_vote.elapsed();
-    println!("hash user_id: {:?}, write VL {:?}, write CL {:?}, /vote: {:?}", hash_duration, vl_duration, cl_duration, total_duration);
+    info!("hash user_id: {:?}, write VL {:?}, write CL {:?}, /vote: {:?}", hash_duration, vl_duration, cl_duration, total_duration);
 
-    Ok(HttpResponse::Ok().body("Vote recorded"))
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "vote_id": vote_id })))
 }
 
 // Updated results handler
+#[get("/results")]
 pub async fn results(_req: HttpRequest) -> Result<HttpResponse, Error> {
     let vote_counts = count_votes_6().map_err(|e| {
         actix_web::error::ErrorInternalServerError(format!("Error counting votes: {}", e))
