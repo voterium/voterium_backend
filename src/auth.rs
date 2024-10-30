@@ -1,7 +1,9 @@
 use actix_web::{http::header, HttpRequest, Error as ActixError, error};
+use rand::{rngs::OsRng, RngCore};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use std::{env, fs};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -52,4 +54,11 @@ pub async fn validate_jwt(req: &HttpRequest) -> Result<Claims, ActixError> {
         })?;
 
     Ok(token_data.claims)
+}
+
+
+pub fn gen_random_b64_string(length: usize) -> String {
+    let mut random_bytes = vec![0u8; length];
+    OsRng.fill_bytes(&mut random_bytes);
+    URL_SAFE_NO_PAD.encode(&random_bytes)
 }

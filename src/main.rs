@@ -8,6 +8,7 @@ use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
 use env_logger::Env;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -41,8 +42,13 @@ async fn main() -> std::io::Result<()> {
     .expect("Failed to create votes table");
 
     let data = web::Data::new(pool);
-    let state = routes::AppState {
-        backend_salt: env::var("BACKEND_SALT").expect("BACKEND_SALT must be set"),
+
+    let backend_salt = env::var("BACKEND_SALT").expect("BACKEND_SALT must be set");
+    let backend_salt = URL_SAFE_NO_PAD.decode(&backend_salt)
+        .expect("Invalid BACKEND_SALT; must be valid Base64");
+
+    let state = models::AppState {
+        backend_salt,
     };
 
     // Start the HTTP server
