@@ -1,4 +1,5 @@
 mod auth;
+mod counting;
 mod models;
 mod routes;
 
@@ -19,29 +20,29 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     // Get the database URL from the environment variable
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    // Create a connection pool to the SQLite database
-    let pool = SqlitePool::connect(&database_url)
-        .await
-        .expect("Failed to create pool");
+    // // Create a connection pool to the SQLite database
+    // let pool = SqlitePool::connect(&database_url)
+    //     .await
+    //     .expect("Failed to create pool");
 
-    // Ensure the database schema is created
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS votes (
-            id INTEGER PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            choice TEXT NOT NULL,
-            timestamp INTEGER NOT NULL
-        );
-        "#,
-    )
-    .execute(&pool)
-    .await
-    .expect("Failed to create votes table");
+    // // Ensure the database schema is created
+    // sqlx::query(
+    //     r#"
+    //     CREATE TABLE IF NOT EXISTS votes (
+    //         id INTEGER PRIMARY KEY,
+    //         user_id TEXT NOT NULL,
+    //         choice TEXT NOT NULL,
+    //         timestamp INTEGER NOT NULL
+    //     );
+    //     "#,
+    // )
+    // .execute(&pool)
+    // .await
+    // .expect("Failed to create votes table");
 
-    let data = web::Data::new(pool);
+    // let data = web::Data::new(pool);
 
     let backend_salt = env::var("BACKEND_SALT").expect("BACKEND_SALT must be set");
     let backend_salt = URL_SAFE_NO_PAD.decode(&backend_salt)
@@ -58,7 +59,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .wrap(cors) // Apply the CORS middleware
-            .app_data(data.clone())
+            // .app_data(data.clone())
             .app_data(web::Data::new(state.clone()))
             .service(
                 web::resource("/vote")

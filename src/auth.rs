@@ -4,13 +4,7 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use std::{env, fs};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: String,
-    pub exp: usize,
-    pub salt: String,
-}
+use crate::models::Claims;
 
 pub async fn validate_jwt(req: &HttpRequest) -> Result<Claims, ActixError> {
     // Extract the Authorization header
