@@ -1,6 +1,6 @@
 // Various implementations of vote countings.
 // The following benchmark is based on 10M votes from 10M voters (i.e. no recast votes)
-// 
+//
 // count_votes_1 - total 4.753971375s  -  open and buffer file: 41.042µs, parse lines and collect votes 1.485171167s, process votes into latest_votes 2.149584666s, count votes 1.119173834s
 // count_votes_2 - total 8.007304333s  -  open and buffer file: 39.005541ms, parse lines and collect votes 21.833µs, process votes into latest_votes 6.828549s, count votes 1.139727167s
 // count_votes_3 - total 3.485497625s  -  open and buffer file: 31.875µs, process votes to latest_votes 2.309327167s, count votes 1.176135583s
@@ -23,20 +23,18 @@
 // count_votes_8 - total 610.525166ms  -  open and buffer file: 168.750958ms, process votes to latest_votes 439.975791ms, count votes 1.797167ms
 // count_votes_9 - total 1.314916s  -  open and buffer file: 38.125µs, process votes to latest_votes 1.314256125s, count votes 621.25µs
 
-
-use std::fs::File;
-use std::io::{BufReader, BufRead, Read};
-use std::collections::HashMap;
-use std::time::Instant;
-use std::io::Seek;
+use crate::models::{CLVote, Choice, VoteCount};
 use csv::ReaderBuilder;
-use rustc_hash::FxHashMap;
-use memmap2::{Mmap};
-use memchr::{memchr, memrchr};
-use crate::models::{VoteCount, CLVote};
 use log::{info, warn};
-
-
+use memchr::{memchr, memrchr};
+use memmap2::Mmap;
+use rustc_hash::FxHashMap;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Seek;
+use std::io::{BufRead, BufReader, Read};
+use std::iter;
+use std::time::Instant;
 
 pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
@@ -59,7 +57,9 @@ pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
             continue; // Skip malformed lines
         }
 
-        let timestamp = parts[1].parse::<i64>().map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        let timestamp = parts[1]
+            .parse::<i64>()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
         let vote = CLVote {
             user_id_hash: parts[0].to_string(),
@@ -168,7 +168,6 @@ pub fn count_votes_2() -> Result<Vec<VoteCount>, Box<dyn std::error::Error>> {
     Ok(vote_counts)
 }
 
-
 pub fn count_votes_3() -> Result<Vec<VoteCount>, std::io::Error> {
     use std::time::Instant;
 
@@ -238,8 +237,6 @@ pub fn count_votes_3() -> Result<Vec<VoteCount>, std::io::Error> {
 
     Ok(vote_counts)
 }
-
-
 
 fn count_lines_fast(reader: &mut BufReader<File>) -> Result<usize, std::io::Error> {
     let mut buffer = [0; 8192];
@@ -331,8 +328,6 @@ pub fn count_votes_4() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-
-
 pub fn count_votes_5() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
 
@@ -410,8 +405,7 @@ pub fn count_votes_5() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-
-pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_6(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -465,7 +459,12 @@ pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
 
     // Count the votes
     let start_count = Instant::now();
-    let mut counts: HashMap<&[u8], u32> = HashMap::new();
+
+    let mut counts: HashMap<&[u8], u32> = HashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
@@ -487,8 +486,6 @@ pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
 
     Ok(vote_counts)
 }
-
-
 
 pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
@@ -631,8 +628,6 @@ pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-
-
 pub fn count_votes_8() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
 
@@ -723,7 +718,6 @@ fn find_new_line_pos(bytes: &[u8]) -> Option<usize> {
     bytes.iter().rposition(|&b| b == b'\n')
 }
 
-
 pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
 
@@ -747,13 +741,13 @@ pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
             break; // EOF reached
         }
 
-        let actual_buf = &mut buf[..bytes_not_processed+n_bytes_read];
+        let actual_buf = &mut buf[..bytes_not_processed + n_bytes_read];
         let last_new_line_index = match find_new_line_pos(&actual_buf) {
             Some(index) => index,
             None => {
                 warn!("No new line found in the read buffer");
                 bytes_not_processed += n_bytes_read;
-                if bytes_not_processed == buf.len(){
+                if bytes_not_processed == buf.len() {
                     panic!("No new line found in the read buffer");
                 }
                 continue; // try again, maybe we next read will have a newline
@@ -782,23 +776,21 @@ pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
                 bytes_not_processed = &actual_buf.len() - last_new_line_index - 1;
                 continue;
             }
-        
+
             let user_id_hash = parts[0].to_vec();
             // Skip timestamp (parts[1])
             let choice = parts[2].to_vec();
-    
-        
+
             // Overwrite the latest vote for the user
             latest_votes.insert(user_id_hash, choice);
         }
 
-        actual_buf.copy_within(last_new_line_index+1.., 0);
+        actual_buf.copy_within(last_new_line_index + 1.., 0);
         // You cannot use bytes_not_processed = bytes_read - last_new_line_index
         // - 1; because the buffer will contain unprocessed bytes from the
         // previous iteration and the new line index will be calculated from the
         // start of the buffer
         bytes_not_processed = actual_buf.len() - last_new_line_index - 1;
-
     }
     let duration_process = start_process.elapsed();
 
