@@ -24,16 +24,19 @@
 // count_votes_9 - total 1.314916s  -  open and buffer file: 38.125µs, process votes to latest_votes 1.314256125s, count votes 621.25µs
 
 use crate::models::{CLVote, Choice, VoteCount};
+use blake2::digest::Key;
 use csv::ReaderBuilder;
 use log::{info, warn};
-use memchr::{memchr, memrchr};
+use memchr::{memchr, memchr2_iter, memchr_iter, memrchr};
 use memmap2::Mmap;
+use rand::seq::IteratorRandom;
 use rustc_hash::FxHashMap;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Seek;
 use std::io::{BufRead, BufReader, Read};
-use std::iter;
+use std::process::CommandArgs;
+use std::{iter, mem};
 use std::time::Instant;
 
 pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
@@ -405,7 +408,7 @@ pub fn count_votes_5() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-pub fn count_votes_6(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -459,12 +462,7 @@ pub fn count_votes_6(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Erro
 
     // Count the votes
     let start_count = Instant::now();
-
-    let mut counts: HashMap<&[u8], u32> = HashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
-
+    let mut counts: HashMap<&[u8], u32> = HashMap::new();
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
@@ -480,12 +478,13 @@ pub fn count_votes_6(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Erro
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_6 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    println!("count_votes_6 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
+
 
 pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
@@ -813,6 +812,755 @@ pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
 
     let duration_total = start_total.elapsed();
     info!("count_votes_9 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+pub fn count_votes_10(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    let mut i = 0;
+    let data_len = data.len();
+
+    while i < data_len {
+        // Find the next newline
+        let next_newline = memchr(b'\n', &data[i..]).unwrap_or(data_len - i);
+        let line = &data[i..i + next_newline];
+        i += next_newline + 1; // Move past the newline
+
+        // Split the line by commas
+        let mut start = 0;
+        let mut parts = Vec::with_capacity(3);
+        for _ in 0..3 {
+            match memchr(b',', &line[start..]) {
+                Some(pos) => {
+                    parts.push(&line[start..start + pos]);
+                    start += pos + 1;
+                }
+                None => {
+                    parts.push(&line[start..]);
+                    break;
+                }
+            }
+        }
+        if parts.len() < 3 {
+            // Skip malformed line
+            continue;
+        }
+
+        let user_id_hash = parts[0];
+        // Skip timestamp (parts[1])
+        let choice = parts[2];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+    }
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: HashMap<&[u8], u32> = HashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_10 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+pub fn count_votes_11(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    let mut i = 0;
+    let data_len = data.len();
+
+    while i < data_len {
+        // Find the next newline
+        let next_newline = memchr(b'\n', &data[i..]).unwrap_or(data_len - i);
+        let line = &data[i..i + next_newline];
+        i += next_newline + 1; // Move past the newline
+
+        // Split the line by commas
+        let mut start = 0;
+        let mut parts = Vec::with_capacity(3);
+        for _ in 0..3 {
+            match memchr(b',', &line[start..]) {
+                Some(pos) => {
+                    parts.push(&line[start..start + pos]);
+                    start += pos + 1;
+                }
+                None => {
+                    parts.push(&line[start..]);
+                    break;
+                }
+            }
+        }
+        if parts.len() < 3 {
+            // Skip malformed line
+            continue;
+        }
+
+        let user_id_hash = parts[0];
+        // Skip timestamp (parts[1])
+        let choice = parts[2];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+    }
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+        
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_11 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+
+pub fn count_votes_12(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    let mut i = 0;
+    let data_len = data.len();
+
+    while i < data_len {
+        // Find the next newline
+        let next_newline = memchr(b'\n', &data[i..]).unwrap_or(data_len - i);
+        let line = &data[i..i + next_newline];
+        i += next_newline + 1; // Move past the newline
+
+        // Split the line by commas
+        let mut start = 0;
+        let mut parts = Vec::with_capacity(3);
+        for _ in 0..3 {
+            match memchr(b',', &line[start..]) {
+                Some(pos) => {
+                    parts.push(&line[start..start + pos]);
+                    start += pos + 1;
+                }
+                None => {
+                    parts.push(&line[start..]);
+                    break;
+                }
+            }
+        }
+        if parts.len() < 3 {
+            // Skip malformed line
+            continue;
+        }
+
+        let user_id_hash = parts[0];
+        // Skip timestamp (parts[1])
+        let choice = parts[2];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+    }
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    // let choice_keys: HashSet<&[u8]> = HashSet::from_iter(choices.iter().map(|choice| choice.key.as_bytes()));
+    // for choice in latest_votes.iter().filter_map(|(key, value)| {
+    //     if choice_keys.contains(value) {
+    //         Some(value)
+    //     } else {
+    //         None
+    //     }
+    // }) {
+    //     *counts.entry(*choice).or_insert(0) += 1;
+    // }
+
+
+    let mut choice_keys = choices.iter().map(|choice| choice.key.as_bytes()).collect::<Vec<_>>();
+    for choice in latest_votes.iter().filter_map(|(key, value)| 
+        if choice_keys.contains(value) {
+            Some(value)
+        } else {
+            None
+        }
+    ) {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+
+
+    // let mut choice_keys = choices.iter().map(|choice| choice.key.as_bytes()).collect::<Vec<_>>();
+    // choice_keys.sort_unstable();
+    // for choice in latest_votes.iter().filter_map(|(key, value)| 
+    //     choice_keys.binary_search(value).map(|_| value).ok()
+    // ) {
+    //     *counts.entry(*choice).or_insert(0) += 1;
+    // }
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_12 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+pub fn count_votes_13(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    let mut i = 0;
+    let data_len = data.len();
+
+    while i < data_len {
+        // Find the next newline
+        let next_newline = memchr(b'\n', &data[i..]).unwrap_or(data_len - i);
+        // let next_newline = data[i..].iter().position(|&b| b == b'\n').unwrap_or(data_len - i);
+        let line = &data[i..i + next_newline];
+        i += next_newline + 1; // Move past the newline
+
+        // Split the line by commas
+        let commas: Vec<usize> = memchr_iter(b',', &line).collect();
+        if commas.len() != 2 {
+            // Skip malformed line
+            continue;
+        }
+
+        let user_id_hash = &line[0..commas[0]];
+        let choice = &line[commas[1] + 1..];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+    }
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+        
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_13 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+
+pub fn count_votes_14(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    let mut line_start = 0;
+    for line_end in memchr_iter(b'\n', &data) {
+        let line = &data[line_start..line_end];
+        line_start = line_end + 1;
+
+        // Split the line by commas
+        let commas: Vec<usize> = memchr_iter(b',', &line).collect();
+        if commas.len() != 2 {
+            // Skip malformed line
+            continue;
+        }
+
+        let user_id_hash = &line[..commas[0]];
+        let choice = &line[commas[1] + 1..];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+    }
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+        
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_14 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+pub fn count_votes_15(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    let mut line_start = 0;
+    for line_end in memchr_iter(b'\n', &data) {
+        let line = &data[line_start..line_end];
+        line_start = line_end + 1;
+
+        // Split the line by commas
+        let mut comma_indices = [0; 2];
+        let mut comma_count = 0;
+        for (i, &byte) in line.iter().enumerate() {
+            if byte == b',' {
+                if comma_count < 2 {
+                    comma_indices[comma_count] = i;
+                    comma_count += 1;
+                } else {
+                    break;
+                }
+            }
+        }
+        if comma_count != 2 {
+            // Skip malformed line
+            continue;
+        }
+
+        let user_id_hash = &line[..comma_indices[0]];
+        let choice = &line[comma_indices[1] + 1..];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+    }
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+        
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_15 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+fn fast_split(data: &[u8], delimiter: u8) -> impl Iterator<Item = &[u8]> {
+    // use memchr_iter
+    memchr_iter(delimiter, data)
+        .scan(0, |start, end| {
+            let slice = &data[*start..end];
+            *start = end + 1;
+            Some(slice)
+        })
+}
+
+
+pub fn count_votes_16(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let file_size = file.metadata()?.len() as usize;
+    let mut data = Vec::with_capacity(file_size);
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+
+    for line in fast_split(&data, b'\n') {
+        let mut commas = memchr_iter(b',', line);
+        if let Some(c1) = commas.next() {
+            if let Some(c2) = commas.next() {
+                let user_id_hash = &line[..c1];
+                let choice = &line[c2 + 1..];
+
+                // Overwrite the latest vote for the user
+                latest_votes.insert(user_id_hash, choice);
+            }
+        }
+    }
+
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+        
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_16 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+
+pub fn count_votes_17(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let file_size = file.metadata()?.len() as usize;
+    let mut data = Vec::with_capacity(file_size);
+    file.read_to_end(&mut data)?;
+    let duration_read = start_read.elapsed();
+
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
+    
+    
+    let mut matches =  memchr2_iter(b'\n', b',', &data);    
+    let mut prev_newline = 0;
+
+    // // let mut c1 = 0;
+    // let mut c2 = 0;
+    // let mut newline = 0;
+
+
+    // while let Some(c1) = matches.next() {
+    //     c2 = matches.next().unwrap();
+    //     newline = matches.next().unwrap();
+
+    //     let user_id_hash = &data[prev_newline..c1];
+    //     let choice = &data[c2 + 1..newline];
+
+    //     // Overwrite the latest vote for the user
+    //     latest_votes.insert(user_id_hash, choice);
+    //     prev_newline = newline;
+    // }
+
+    let mut user_id_hash: &[u8];
+    let mut choice: &[u8];
+
+    while let (Some(c1), Some(c2), Some(newline)) = (matches.next(), matches.next(), matches.next()) {
+        user_id_hash = &data[prev_newline..c1];
+        choice = &data[c2 + 1..newline];
+
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+        prev_newline = newline;
+    }
+
+
+    // let mut indicator = 0;
+    // let mut c1 = 0;
+    // let mut c2 = 0;
+    // let mut newline = 0;
+
+    // for idx in matches {
+    //     match indicator {
+    //         0 => {
+    //             c1 = idx;
+    //             indicator = 1;
+    //         },
+    //         1 => {
+    //             c2 = idx;
+    //             indicator = 2;
+    //         },
+    //         2 => {
+    //             newline = idx;
+    //             let user_id_hash = &data[prev_newline..c1];
+    //             let choice = &data[c2 + 1..newline];
+
+    //             // Overwrite the latest vote for the user
+    //             latest_votes.insert(user_id_hash, choice);
+    //             prev_newline = newline;
+    //             indicator = 0;
+    //         },
+    //         _ => {}
+    //     }
+    // }
+
+
+
+    // while let Some(comma1) = separators.next() {
+        // if let Some(comma2) = separators.next() {
+        //     if let Some(newline) = separators.next() {
+        //         let user_id_hash = &data[prev_newline..comma1];
+        //         let choice = &data[comma2 + 1..newline];
+
+        //         // Overwrite the latest vote for the user
+        //         latest_votes.insert(user_id_hash, choice);
+        //         prev_newline = newline;
+        //     }
+        // }
+
+        // comma2 = separators.next();
+        // newline = separators.next();
+        // if let(Some(comma1), Some(comma2), Some(newline)) = (comma1, comma2, newline) {
+        //     let user_id_hash = &data[prev_newline..comma1];
+        //     let choice = &data[comma2 + 1..newline];
+
+        //     // Overwrite the latest vote for the user
+        //     latest_votes.insert(user_id_hash, choice);
+        //     prev_newline = newline;
+        // }
+        
+        // let user_id_hash = &data[prev_newline..comma1];
+        // let choice = &data[comma2 + 1..newline];
+
+        // // Overwrite the latest vote for the user
+        // latest_votes.insert(user_id_hash, choice);
+        // prev_newline = newline;
+
+        // let line = &data[prev_newline..c1];
+        // let mut commas = memchr_iter(b',', line);
+        // if let Some(c1) = commas.next() {
+        //     if let Some(c2) = commas.next() {
+        //         let user_id_hash = &line[..c1];
+        //         let choice = &line[c2 + 1..];
+
+        //         // Overwrite the latest vote for the user
+        //         latest_votes.insert(user_id_hash, choice);
+        //     }
+        // }
+    // }
+
+    // for line in fast_split(&data, b'\n') {
+    //     let mut commas = memchr_iter(b',', line);
+    //     if let Some(c1) = commas.next() {
+    //         if let Some(c2) = commas.next() {
+    //             let user_id_hash = &line[..c1];
+    //             let choice = &line[c2 + 1..];
+
+    //             // Overwrite the latest vote for the user
+    //             latest_votes.insert(user_id_hash, choice);
+    //         }
+    //     }
+    // }
+
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_insert(0) += 1;
+    }
+        
+
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_17 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 
