@@ -1,9 +1,10 @@
-use actix_web::{http::header, HttpRequest, Error as ActixError, error};
+use actix_web::{error, http::header, Error as ActixError};
 use rand::{rngs::OsRng, RngCore};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use std::{env, fs};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use crate::models::Claims;
+
 
 use actix_web::{
     body::MessageBody,
@@ -12,21 +13,32 @@ use actix_web::{
     Error, HttpMessage
 };
 
+const PUBLIC_PATHS: &'static [&str] = &[
+    "/voting/config", 
+    "/voting/results"
+];
+
+
 pub async fn jwt_middleware(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
+
     // pre-processing
+    if PUBLIC_PATHS.contains(&req.path()) || req.method() == "OPTIONS" || req.method() == "HEAD" {
+        return next.call(req).await
+    }
+
     let claims = validate_jwt(&req).await?;
     req.extensions_mut().insert(claims);
+
 
     next.call(req).await
 
     // post-processing
 }
 
-
-pub async fn validate_jwt(req: &ServiceRequest) -> Result<Claims, ActixError> {
+async fn validate_jwt(req: &ServiceRequest) -> Result<Claims, ActixError> {
     // Extract the Authorization header
     let auth_header = req.headers().get(header::AUTHORIZATION);
     let token = match auth_header {

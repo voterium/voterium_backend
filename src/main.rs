@@ -65,11 +65,11 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .wrap(cors) // Apply the CORS middleware
+            .wrap(from_fn(auth::jwt_middleware))
             .app_data(web::Data::new(state.clone()))
             .service(
                 web::scope("/voting")
-                    .wrap(from_fn(auth::jwt_middleware))
-                    .service(handlers::vote)
+                    .service(handlers::vote).wrap(from_fn(auth::jwt_middleware))
                     .service(handlers::get_results)
                     .service(handlers::get_config),
             )

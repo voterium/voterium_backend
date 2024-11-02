@@ -1,8 +1,6 @@
 use crate::auth::gen_random_b64_string;
 use crate::counting::{
-    count_votes_1, count_votes_10, count_votes_11, count_votes_12, count_votes_13, count_votes_14,
-    count_votes_15, count_votes_16, count_votes_17, count_votes_2, count_votes_3, count_votes_4,
-    count_votes_5, count_votes_6, count_votes_7, count_votes_8, count_votes_9,
+    count_votes_1, count_votes_10, count_votes_11, count_votes_12, count_votes_13, count_votes_14, count_votes_15, count_votes_16, count_votes_17, count_votes_18, count_votes_2, count_votes_3, count_votes_4, count_votes_5, count_votes_6, count_votes_7, count_votes_8, count_votes_9
 };
 use crate::models::{AppState, CLVote, Claims, VLVote, Vote};
 use actix_web::{get, post, web, Error, HttpRequest, HttpResponse};
@@ -114,10 +112,11 @@ pub async fn vote(
 #[get("/results")]
 pub async fn get_results(
     app_state: web::Data<AppState>,
-    _req: HttpRequest,
+    // _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
     let allowed_choices = &app_state.config.choices;
-    let mut vote_counts = count_votes_16(allowed_choices).map_err(|e| {
+
+    let mut vote_counts = count_votes_18(allowed_choices).map_err(|e| {
         actix_web::error::ErrorInternalServerError(format!("Error counting votes: {}", e))
     })?;
 
