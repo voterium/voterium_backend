@@ -1,6 +1,5 @@
 use jsonwebtoken::DecodingKey;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct Vote {
@@ -38,10 +37,11 @@ pub struct Config {
     pub choices: Vec<Choice>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     pub backend_salt: Vec<u8>,
     pub config: Config,
+    pub decoding_key: DecodingKey,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,45 +1,47 @@
-use actix_web::{error, http::header, Error as ActixError};
-use rand::{rngs::OsRng, RngCore};
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
-use std::{env, fs};
+use crate::models::{AppState, Claims};
+use actix_web::{error, http::header, web};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use crate::models::Claims;
-
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+use rand::{rngs::OsRng, RngCore};
 
 use actix_web::{
-    body::MessageBody,
+    body::{BoxBody, EitherBody, MessageBody},
     dev::{ServiceRequest, ServiceResponse},
     middleware::Next,
-    Error, HttpMessage
+    Error, HttpMessage,
 };
 
-const PUBLIC_PATHS: &'static [&str] = &[
-    "/voting/config", 
-    "/voting/results"
-];
+const PUBLIC_PATHS: &'static [&str] = &["/voting/config", "/voting/results"];
 
-
-pub async fn jwt_middleware(
+pub async fn jwt_middleware<B>(
+    app_state: web::Data<AppState>,
     req: ServiceRequest,
-    next: Next<impl MessageBody>,
-) -> Result<ServiceResponse<impl MessageBody>, Error> {
-
-    // pre-processing
-    if PUBLIC_PATHS.contains(&req.path()) || req.method() == "OPTIONS" || req.method() == "HEAD" {
-        return next.call(req).await
+    next: Next<B>,
+) -> Result<ServiceResponse<EitherBody<B, BoxBody>>, Error>
+where
+    B: MessageBody + 'static,
+{
+    if PUBLIC_PATHS.contains(&req.path()) {
+        // Proceed to the next middleware or handler
+        let res = next.call(req).await?;
+        return Ok(res.map_into_left_body());
     }
 
-    let claims = validate_jwt(&req).await?;
-    req.extensions_mut().insert(claims);
-
-
-    next.call(req).await
-
-    // post-processing
+    match validate_jwt(&req, &app_state.decoding_key).await {
+        Ok(claims) => {
+            req.extensions_mut().insert(claims);
+            let res = next.call(req).await?;
+            Ok(res.map_into_left_body())
+        }
+        Err(_) => {
+            let response = error::ErrorUnauthorized("Unauthorized").error_response();
+            let res = req.into_response(response);
+            Ok(res.map_into_right_body())
+        }
+    }
 }
 
-async fn validate_jwt(req: &ServiceRequest) -> Result<Claims, ActixError> {
-    // Extract the Authorization header
+async fn validate_jwt(req: &ServiceRequest, decoding_key: &DecodingKey) -> Result<Claims, Error> {
     let auth_header = req.headers().get(header::AUTHORIZATION);
     let token = match auth_header {
         Some(header_value) => {
@@ -56,32 +58,21 @@ async fn validate_jwt(req: &ServiceRequest) -> Result<Claims, ActixError> {
     let token = match token {
         Some(t) => t,
         None => {
-            return Err(error::ErrorUnauthorized("Missing or invalid Authorization header"))
+            return Err(error::ErrorUnauthorized(
+                "Missing or invalid Authorization header",
+            ))
         }
     };
-
-    // Load the public key from the file specified in JWT_PUBLIC_KEY_PATH
-    let jwt_public_key_path =
-        env::var("JWT_PUBLIC_KEY_PATH").expect("JWT_PUBLIC_KEY_PATH not set");
-    let public_key_pem = fs::read_to_string(jwt_public_key_path).map_err(|err| {
-        error::ErrorInternalServerError(format!("Failed to read public key file: {}", err))
-    })?;
-    let decoding_key = DecodingKey::from_ed_pem(public_key_pem.as_bytes()).map_err(|err| {
-        error::ErrorInternalServerError(format!("Failed to create decoding key: {}", err))
-    })?;
 
     let mut validation = Validation::new(Algorithm::EdDSA);
     validation.validate_exp = true;
 
     // Decode and validate the JWT
-    let token_data =
-        decode::<Claims>(&token, &decoding_key, &validation).map_err(|err| {
-            error::ErrorUnauthorized(format!("Invalid token: {}", err))
-        })?;
+    let token_data = decode::<Claims>(&token, &decoding_key, &validation)
+        .map_err(|err| error::ErrorUnauthorized(format!("Invalid token: {}", err)))?;
 
     Ok(token_data.claims)
 }
-
 
 pub fn gen_random_b64_string(length: usize) -> String {
     let mut random_bytes = vec![0u8; length];

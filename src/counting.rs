@@ -1565,15 +1565,15 @@ pub fn count_votes_17(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 }
 
 
-pub fn count_votes_18(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
     let start_read = Instant::now();
     let mut file = File::open("cl.csv")?;
     let file_size = file.metadata()?.len() as usize;
-    let max_bytes_per_line = 32;
-    let estimated_n_lines = file_size / max_bytes_per_line;
+    let min_bytes_per_line = 32;
+    let max_n_lines = file_size / min_bytes_per_line;
     let mut data = Vec::with_capacity(file_size);
     file.read_to_end(&mut data)?;
     let duration_read = start_read.elapsed();
@@ -1581,7 +1581,7 @@ pub fn count_votes_18(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
     let start_process = Instant::now();
 
     let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        estimated_n_lines, 
+        max_n_lines, 
         Default::default()
     );
 
