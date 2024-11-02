@@ -1,16 +1,21 @@
+// mod auth;
 mod auth;
 mod counting;
 mod handlers;
 mod models;
 
 use actix_cors::Cors;
+use actix_web::middleware::from_fn;
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use dotenv::dotenv;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use dotenv::dotenv;
 use env_logger::Env;
 use std::env;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
+use std::sync::Arc;
+
+// use crate::auth::JwtMiddleware;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -29,10 +34,26 @@ async fn main() -> std::io::Result<()> {
     // Read voting_config.json
     let mut file = File::open("voting_config.json").expect("Failed to open voting_config.json");
     let mut contents = String::new();
-    file.read_to_string(&mut contents).expect("Failed to read voting_config.json");
-    let config: models::Config = serde_json::from_str(&contents).expect("Failed to parse voting_config.json");
+    file.read_to_string(&mut contents)
+        .expect("Failed to read voting_config.json");
+    let config: models::Config =
+        serde_json::from_str(&contents).expect("Failed to parse voting_config.json");
 
-    let state = models::AppState { 
+    // Load the public key from the file specified in JWT_PUBLIC_KEY_PATH
+    let jwt_public_key_path =
+        env::var("JWT_PUBLIC_KEY_PATH").expect("JWT_PUBLIC_KEY_PATH not set");
+    let public_key_pem = fs::read_to_string(jwt_public_key_path)
+        .expect("Failed to read public key file");
+    let decoding_key = jsonwebtoken::DecodingKey::from_ed_pem(public_key_pem.as_bytes())
+        .expect("Failed to create decoding key");
+    let decoding_key = Arc::new(decoding_key);
+
+    // // Create JWT middleware
+    // let jwt_middleware = JwtMiddleware {
+    //     decoding_key: decoding_key.clone(),
+    // };
+
+    let state = models::AppState {
         backend_salt,
         config,
     };
@@ -47,6 +68,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(state.clone()))
             .service(
                 web::scope("/voting")
+                    .wrap(from_fn(auth::jwt_middleware))
                     .service(handlers::vote)
                     .service(handlers::get_results)
                     .service(handlers::get_config),

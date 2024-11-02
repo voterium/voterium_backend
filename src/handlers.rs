@@ -1,8 +1,10 @@
-use crate::auth::{gen_random_b64_string, validate_jwt};
+use crate::auth::gen_random_b64_string;
 use crate::counting::{
-    count_votes_1, count_votes_10, count_votes_11, count_votes_12, count_votes_13, count_votes_14, count_votes_15, count_votes_16, count_votes_17, count_votes_2, count_votes_3, count_votes_4, count_votes_5, count_votes_6, count_votes_7, count_votes_8, count_votes_9
+    count_votes_1, count_votes_10, count_votes_11, count_votes_12, count_votes_13, count_votes_14,
+    count_votes_15, count_votes_16, count_votes_17, count_votes_2, count_votes_3, count_votes_4,
+    count_votes_5, count_votes_6, count_votes_7, count_votes_8, count_votes_9,
 };
-use crate::models::{AppState, CLVote, VLVote, Vote};
+use crate::models::{AppState, CLVote, Claims, VLVote, Vote};
 use actix_web::{get, post, web, Error, HttpRequest, HttpResponse};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use blake2::{digest::consts::U12, Blake2b, Digest};
@@ -12,6 +14,8 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::Instant;
 
+// Import HttpMessage to access extensions
+use actix_web::HttpMessage;
 
 type Blake2b96 = Blake2b<U12>; // 96 bytes = 12 * 8 bits
 
@@ -41,6 +45,7 @@ fn hash_user_id(
     Ok(user_id_hash)
 }
 
+
 #[post("/vote")]
 pub async fn vote(
     app_state: web::Data<AppState>,
@@ -49,11 +54,14 @@ pub async fn vote(
 ) -> Result<HttpResponse, Error> {
     let start_vote = Instant::now();
 
-    // Validate JWT and extract claims
-    let claims = validate_jwt(&req).await?;
+    // Store extensions in a variable to extend its lifetime
+    let extensions = req.extensions();
+    let claims = extensions.get::<Claims>().ok_or_else(|| {
+        actix_web::error::ErrorInternalServerError("Claims not found in request extensions")
+    })?;
 
-    let user_id = claims.sub;
-    let user_salt = claims.salt;
+    let user_id = claims.sub.clone();
+    let user_salt = claims.salt.clone();
     let backend_salt = &app_state.backend_salt;
     let vote_id = gen_random_b64_string(12);
 
@@ -64,7 +72,10 @@ pub async fn vote(
 
     // Verify that the choice is valid
     if !app_state.config.choices.iter().any(|c| c.key == vote.choice) {
-        return Err(actix_web::error::ErrorBadRequest(format!("Invalid choice: {}", vote.choice)));
+        return Err(actix_web::error::ErrorBadRequest(format!(
+            "Invalid choice: {}",
+            vote.choice
+        )));
     }
 
     // Get current timestamp in milliseconds
@@ -101,12 +112,14 @@ pub async fn vote(
 
 // Updated results handler
 #[get("/results")]
-pub async fn get_results(app_state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    let allowed_choices = &app_state.config.choices;    
+pub async fn get_results(
+    app_state: web::Data<AppState>,
+    _req: HttpRequest,
+) -> Result<HttpResponse, Error> {
+    let allowed_choices = &app_state.config.choices;
     let mut vote_counts = count_votes_16(allowed_choices).map_err(|e| {
         actix_web::error::ErrorInternalServerError(format!("Error counting votes: {}", e))
     })?;
-    
 
     // Sort vote_counts by choice
     vote_counts.sort_by(|a, b| a.choice.cmp(&b.choice));
@@ -119,7 +132,6 @@ pub async fn get_config(app_state: web::Data<AppState>) -> Result<HttpResponse, 
     let config = &app_state.config;
     Ok(HttpResponse::Ok().json(config))
 }
-
 
 fn append_to_cl(file_path: &str, cl_vote: &CLVote) -> Result<(), Error> {
     // Open the file in append mode

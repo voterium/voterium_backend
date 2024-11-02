@@ -1,12 +1,32 @@
 use actix_web::{http::header, HttpRequest, Error as ActixError, error};
 use rand::{rngs::OsRng, RngCore};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
 use std::{env, fs};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use crate::models::Claims;
 
-pub async fn validate_jwt(req: &HttpRequest) -> Result<Claims, ActixError> {
+use actix_web::{
+    body::MessageBody,
+    dev::{ServiceRequest, ServiceResponse},
+    middleware::Next,
+    Error, HttpMessage
+};
+
+pub async fn jwt_middleware(
+    req: ServiceRequest,
+    next: Next<impl MessageBody>,
+) -> Result<ServiceResponse<impl MessageBody>, Error> {
+    // pre-processing
+    let claims = validate_jwt(&req).await?;
+    req.extensions_mut().insert(claims);
+
+    next.call(req).await
+
+    // post-processing
+}
+
+
+pub async fn validate_jwt(req: &ServiceRequest) -> Result<Claims, ActixError> {
     // Extract the Authorization header
     let auth_header = req.headers().get(header::AUTHORIZATION);
     let token = match auth_header {
