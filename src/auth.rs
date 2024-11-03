@@ -11,7 +11,11 @@ use actix_web::{
     Error, HttpMessage,
 };
 
-const PUBLIC_PATHS: &'static [&str] = &["/voting/config", "/voting/results"];
+const PUBLIC_PATHS: &'static [&str] = &[
+    "/voting/config", 
+    "/voting/results",
+    "/voting/results2",
+];
 
 pub async fn jwt_middleware<B>(
     app_state: web::Data<AppState>,

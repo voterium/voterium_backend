@@ -1,14 +1,18 @@
 mod auth;
+mod ch;
 mod counting;
 mod handlers;
 mod models;
+mod utils;
 
 use actix_cors::Cors;
 use actix_web::middleware::from_fn;
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use clickhouse::Client;
 use dotenv::dotenv;
 use env_logger::Env;
+use log::info;
 use jsonwebtoken::DecodingKey;
 use std::env;
 use std::fs::{self, File};
@@ -35,10 +39,26 @@ async fn load_app_state() -> models::AppState {
     let public_key_pem = fs::read_to_string(jwt_public_key_path).expect("Failed to read public key");
     let decoding_key = DecodingKey::from_ed_pem(public_key_pem.as_bytes()).expect("Failed to create DecodingKey from public key");
 
+
+    // Initialize ClickHouse client
+    let clickhouse_host = env::var("CLICKHOUSE_HOST").unwrap_or_else(|_| "http://127.0.0.1:8123".to_string());
+    let clickhouse_database = env::var("CLICKHOUSE_DATABASE").unwrap_or_else(|_| "voting".to_string());
+    let clickhouse_user = env::var("CLICKHOUSE_USER").unwrap_or_else(|_| "default".to_string());
+    let clickhouse_password = env::var("CLICKHOUSE_PASSWORD").unwrap_or_else(|_| "".to_string());
+
+    info!("Connecting to ClickHouse as {}", clickhouse_user);
+
+    let clickhouse_client = Client::default()
+        .with_url(&clickhouse_host)
+        .with_database(&clickhouse_database)
+        .with_user(&clickhouse_user)
+        .with_password(&clickhouse_password);
+
     models::AppState {
         backend_salt,
         config,
         decoding_key,
+        clickhouse_client,
     }
 }
 
@@ -62,7 +82,9 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/voting")
                     .service(handlers::vote)
                     .service(handlers::get_results)
-                    .service(handlers::get_config),
+                    .service(handlers::get_config)
+                    // .service(ch::vote2)
+                    // .service(ch::get_results2)
             )
     })
     .bind("127.0.0.1:8080")?

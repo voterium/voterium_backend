@@ -1,3 +1,4 @@
+use clickhouse::{error::Error as ClickHouseError, Client, Row};
 use jsonwebtoken::DecodingKey;
 use serde::{Deserialize, Serialize};
 
@@ -42,6 +43,7 @@ pub struct AppState {
     pub backend_salt: Vec<u8>,
     pub config: Config,
     pub decoding_key: DecodingKey,
+    pub clickhouse_client: Client,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
