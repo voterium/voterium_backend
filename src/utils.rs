@@ -1,8 +1,7 @@
-
-
+use actix_web::Error;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use blake2::{digest::consts::U12, Blake2b, Digest};
-use actix_web::Error;
+use rand::{rngs::OsRng, RngCore};
 
 type Blake2b96 = Blake2b<U12>; // 96 bytes = 12 * 8 bits
 
@@ -30,4 +29,10 @@ pub(crate) fn hash_user_id(
     let user_id_hash = URL_SAFE_NO_PAD.encode(&result);
 
     Ok(user_id_hash)
+}
+
+pub fn gen_random_b64_string(length: usize) -> String {
+    let mut random_bytes = vec![0u8; length];
+    OsRng.fill_bytes(&mut random_bytes);
+    URL_SAFE_NO_PAD.encode(&random_bytes)
 }

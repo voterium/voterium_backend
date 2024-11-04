@@ -1,6 +1,6 @@
 use crate::utils::hash_user_id;
 use crate::{
-    auth::gen_random_b64_string,
+    utils::gen_random_b64_string,
     models::{AppState, CLVote, Claims, VLVote, Vote, VoteCount},
 };
 use actix_web::{get, post, web, Error, HttpMessage, HttpRequest, HttpResponse};

@@ -1,10 +1,12 @@
-use crate::auth::gen_random_b64_string;
+use crate::utils::gen_random_b64_string;
 use crate::counting::count_votes;
 use crate::models::{AppState, CLVote, Claims, VLVote, Vote};
 use crate::utils::hash_user_id;
+use crate::vote_logger::{ChannelMessage, VLCLMessage};
 use actix_web::{get, post, web, Error, HttpRequest, HttpResponse};
 use chrono::Utc;
 use log::info;
+use tokio::sync::oneshot;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::Instant;
@@ -16,7 +18,7 @@ use actix_web::HttpMessage;
 
 
 #[post("/vote")]
-pub async fn vote(
+pub async fn submit_vote(
     app_state: web::Data<AppState>,
     vote: web::Json<Vote>,
     req: HttpRequest,
@@ -28,14 +30,14 @@ pub async fn vote(
     let claims = extensions.get::<Claims>().ok_or_else(|| {
         actix_web::error::ErrorInternalServerError("Claims not found in request extensions")
     })?;
-
+    
+    // Hash the user_id to generate the vote_id receipt
+    let start_hash = Instant::now();
     let user_id = claims.sub.clone();
     let user_salt = claims.salt.clone();
     let backend_salt = &app_state.backend_salt;
     let vote_id = gen_random_b64_string(12);
 
-    // Hash the user_id to generate the vote_id receipt
-    let start_hash = Instant::now();
     let user_id_hash = hash_user_id(&user_id, &user_salt, backend_salt)?;
     let hash_duration = start_hash.elapsed();
 
@@ -78,6 +80,68 @@ pub async fn vote(
 
     Ok(HttpResponse::Ok().json(serde_json::json!({ "vote_id": vote_id })))
 }
+
+
+
+#[post("/vote")]
+pub async fn submit_vote2(
+    app_state: web::Data<AppState>,
+    vote: web::Json<Vote>,
+    req: HttpRequest,
+) -> Result<HttpResponse, Error> {
+    let start_vote = Instant::now();
+    let timestamp = Utc::now().timestamp_millis();
+
+    // Store extensions in a variable to extend its lifetime
+    let extensions = req.extensions();
+    let claims = extensions.get::<Claims>().ok_or_else(|| {
+        actix_web::error::ErrorInternalServerError("Claims not found in request extensions")
+    })?;
+    
+    // Hash the user_id to generate the vote_id receipt
+    let start_hash = Instant::now();
+    let user_id = claims.sub.clone();
+    let user_salt = claims.salt.clone();
+    let backend_salt = &app_state.backend_salt;
+    let vote_id = gen_random_b64_string(12);
+
+    let user_id_hash = hash_user_id(&user_id, &user_salt, backend_salt)?;
+    let hash_duration = start_hash.elapsed();
+
+    // Verify that the choice is valid
+    if !app_state.config.choices.iter().any(|c| c.key == vote.choice) {
+        return Err(actix_web::error::ErrorBadRequest(format!(
+            "Invalid choice: {}",
+            vote.choice
+        )));
+    }
+
+    let start_vl_cl = Instant::now();
+    let sender = &app_state.channel_sender;
+    let (resp_tx, resp_rx) = oneshot::channel::<bool>();
+    let msg = VLCLMessage {
+        vl_data: format!("{},{}\n", vote_id, vote.choice).into_bytes(),
+        cl_data: format!("{},{},{}\n", user_id_hash, timestamp, vote.choice).into_bytes(),
+        resp: resp_tx,
+    };
+
+    sender.send(msg).await.map_err(|e| {
+        actix_web::error::ErrorInternalServerError(format!("Error sending to channel: {}", e))
+    })?;
+
+    resp_rx.await.expect("Error receiving response from channel");
+    let vl_cl_duration = start_vl_cl.elapsed();
+
+    // Log total time for /vote function
+    let total_duration = start_vote.elapsed();
+    info!(
+        "hash user_id: {:?}, write VL CL {:?}, /vote: {:?}",
+        hash_duration, vl_cl_duration, total_duration
+    );
+
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "vote_id": vote_id })))
+}
+
 
 // Updated results handler
 #[get("/results")]

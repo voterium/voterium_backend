@@ -4,6 +4,7 @@ mod counting;
 mod handlers;
 mod models;
 mod utils;
+mod vote_logger;
 
 use actix_cors::Cors;
 use actix_web::middleware::from_fn;
@@ -17,7 +18,7 @@ use jsonwebtoken::DecodingKey;
 use std::env;
 use std::fs::{self, File};
 use std::io::Read;
-
+use tokio;
 
 async fn load_app_state() -> models::AppState {
     // Get the backend salt from the environment variable
@@ -54,11 +55,33 @@ async fn load_app_state() -> models::AppState {
         .with_user(&clickhouse_user)
         .with_password(&clickhouse_password);
 
+    let count_ledger_filepath = "cl.csv";
+    let vote_ledger_filepath = "vl.csv";
+
+    // Create channel for vote logging
+    // let (cl_sender, mut cl_receiver) = tokio::sync::mpsc::channel(10_000);
+    // tokio::spawn(async move {
+    //     vote_logger::write_lines_to_file(&count_ledger_filepath, cl_receiver).await.unwrap();
+    // });
+
+    // let (vl_sender, mut vl_receiver) = tokio::sync::mpsc::channel(10_000);
+    // tokio::spawn(async move {
+    //     vote_logger::write_lines_to_file(&vote_ledger_filepath, vl_receiver).await.unwrap();
+    // });
+
+    let (sender, mut receiver) = tokio::sync::mpsc::channel(10_000);
+    tokio::spawn(async move {
+        vote_logger::write_cl_vl(receiver).await.unwrap();
+    });
+
     models::AppState {
         backend_salt,
         config,
         decoding_key,
         clickhouse_client,
+        channel_sender: sender,
+        // channel_sender_vl: vl_sender,
+        // channel_sender_cl: cl_sender,
     }
 }
 
@@ -80,7 +103,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(state.clone()))
             .service(
                 web::scope("/voting")
-                    .service(handlers::vote)
+                    // .service(handlers::submit_vote)
+                    .service(handlers::submit_vote2)
+                    // .service(handlers::submit_vote3)
                     .service(handlers::get_results)
                     .service(handlers::get_config)
                     // .service(ch::vote2)

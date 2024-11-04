@@ -77,9 +77,3 @@ async fn validate_jwt(req: &ServiceRequest, decoding_key: &DecodingKey) -> Resul
 
     Ok(token_data.claims)
 }
-
-pub fn gen_random_b64_string(length: usize) -> String {
-    let mut random_bytes = vec![0u8; length];
-    OsRng.fill_bytes(&mut random_bytes);
-    URL_SAFE_NO_PAD.encode(&random_bytes)
-}

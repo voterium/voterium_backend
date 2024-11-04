@@ -1,7 +1,7 @@
 {
     "choices": [
-      { "key": "A", "label": "Alice", "color": "#FF0000" },
-      { "key": "B", "label": "Bob", "color": "#00FF00" },
-      { "key": "C", "label": "Charlie", "color": "#0000FF" }
+      { "key": "A", "label": "Alice", "color": "#ffb3ba" },
+      { "key": "B", "label": "Bob", "color": "#baffc9" },
+      { "key": "C", "label": "Charlie", "color": "#bae1ff" }
     ]
   }
