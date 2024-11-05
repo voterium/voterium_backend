@@ -14,7 +14,7 @@ use std::time::Instant;
 // Import HttpMessage to access extensions
 use actix_web::HttpMessage;
 
-use crate::{Result, AppError};
+use crate::errors::{Result, AppError};
 
 #[post("/vote")]
 pub async fn submit_vote(

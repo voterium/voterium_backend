@@ -65,3 +65,13 @@ impl From<std::io::Error> for AppError {
         }
     }
 }
+
+// AppError from csv::Error
+impl From<csv::Error> for AppError {
+    fn from(err: csv::Error) -> AppError {
+        AppError::InternalError {
+            title: "CSV error".to_string(),
+            message: err.to_string(),
+        }
+    }
+}

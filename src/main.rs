@@ -16,6 +16,7 @@ use dotenv::dotenv;
 use env_logger::Env;
 use log::info;
 use jsonwebtoken::DecodingKey;
+use utils::load_voting_config;
 use std::env;
 use std::fs::{self, File};
 use std::io::Read;
@@ -31,12 +32,7 @@ async fn load_app_state() -> models::AppState {
         .expect("Invalid BACKEND_SALT; must be valid Base64");
 
     // Read voting_config.json
-    let mut file = File::open("voting_config.json").expect("Failed to open voting_config.json");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("Failed to read voting_config.json");
-    let config: models::Config =
-        serde_json::from_str(&contents).expect("Failed to parse voting_config.json");
+    let config = load_voting_config();
 
     // Load the public key
     let jwt_public_key_path = env::var("JWT_PUBLIC_KEY_PATH").expect("JWT_PUBLIC_KEY_PATH not set");

@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::Read;
 use std::time::Instant;
 
-use crate::Result;
+use crate::errors::Result;
 
 fn fast_split(data: &[u8], delimiter: u8) -> impl Iterator<Item = &[u8]> {
     memchr_iter(delimiter, data)
@@ -78,7 +78,7 @@ pub fn count_votes(choices: &[Choice]) -> Result<Vec<VoteCount>> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_18 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!("count_votes_18 - total {:?}  -  open file: {:?}, votes to latest_votes {:?}, count {:?}",
         duration_total, duration_read, duration_process, duration_count
     );
 

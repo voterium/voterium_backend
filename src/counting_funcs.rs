@@ -36,7 +36,9 @@ use std::io::Seek;
 use std::io::{BufRead, BufReader, Read};
 use std::time::Instant;
 
-pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
+use crate::errors::{Result, AppError};
+
+pub fn count_votes_1() -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Read the CL file
@@ -107,7 +109,7 @@ pub fn count_votes_1() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-pub fn count_votes_2() -> Result<Vec<VoteCount>, Box<dyn std::error::Error>> {
+pub fn count_votes_2() -> Result<Vec<VoteCount>> {
     use std::time::Instant;
 
     let start_total = Instant::now();
@@ -168,7 +170,7 @@ pub fn count_votes_2() -> Result<Vec<VoteCount>, Box<dyn std::error::Error>> {
     Ok(vote_counts)
 }
 
-pub fn count_votes_3() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_3() -> Result<Vec<VoteCount>> {
     use std::time::Instant;
 
     let start_total = Instant::now();
@@ -238,7 +240,7 @@ pub fn count_votes_3() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-fn count_lines_fast(reader: &mut BufReader<File>) -> Result<usize, std::io::Error> {
+fn count_lines_fast(reader: &mut BufReader<File>) -> Result<usize> {
     let mut buffer = [0; 8192];
     let mut line_count = 0;
 
@@ -252,7 +254,7 @@ fn count_lines_fast(reader: &mut BufReader<File>) -> Result<usize, std::io::Erro
     Ok(line_count)
 }
 
-pub fn count_votes_4() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_4() -> Result<Vec<VoteCount>> {
     use std::time::Instant;
 
     let start_total = Instant::now();
@@ -328,7 +330,7 @@ pub fn count_votes_4() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-pub fn count_votes_5() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_5() -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and memory-map it
@@ -405,7 +407,7 @@ pub fn count_votes_5() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_6() -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -483,7 +485,7 @@ pub fn count_votes_6() -> Result<Vec<VoteCount>, std::io::Error> {
 }
 
 
-pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_7() -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file
@@ -515,10 +517,7 @@ pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
                 // No newline found in buffer
                 if bytes_in_buffer == buf.len() {
                     // Buffer full but no newline, likely a very long line
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Line too long or no newline found in buffer",
-                    ));
+                    return Err(AppError::InternalError{ title: "Line too long".to_string(), message: "A line in the file is too long to process".to_string() });
                 }
                 continue; // Read more data to find a newline
             }
@@ -624,7 +623,7 @@ pub fn count_votes_7() -> Result<Vec<VoteCount>, std::io::Error> {
     Ok(vote_counts)
 }
 
-pub fn count_votes_8() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_8() -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -714,7 +713,7 @@ fn find_new_line_pos(bytes: &[u8]) -> Option<usize> {
     bytes.iter().rposition(|&b| b == b'\n')
 }
 
-pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_9() -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -816,7 +815,7 @@ pub fn count_votes_9() -> Result<Vec<VoteCount>, std::io::Error> {
 }
 
 
-pub fn count_votes_10(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_10(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -899,7 +898,7 @@ pub fn count_votes_10(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 }
 
 
-pub fn count_votes_11(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_11(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -985,7 +984,7 @@ pub fn count_votes_11(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 
 
 
-pub fn count_votes_12(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_12(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1097,7 +1096,7 @@ pub fn count_votes_12(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 }
 
 
-pub fn count_votes_13(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_13(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1170,7 +1169,7 @@ pub fn count_votes_13(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 
 
 
-pub fn count_votes_14(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_14(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1238,7 +1237,7 @@ pub fn count_votes_14(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 }
 
 
-pub fn count_votes_15(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_15(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1328,7 +1327,7 @@ fn fast_split(data: &[u8], delimiter: u8) -> impl Iterator<Item = &[u8]> {
 }
 
 
-pub fn count_votes_16(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_16(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1393,7 +1392,7 @@ pub fn count_votes_16(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 
 
 
-pub fn count_votes_17(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_17(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1565,7 +1564,7 @@ pub fn count_votes_17(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 }
 
 
-pub fn count_votes_18(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes_18(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -1631,7 +1630,6 @@ pub fn count_votes_18(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Err
 
     Ok(vote_counts)
 }
-
 
 
 
@@ -1703,3 +1701,290 @@ pub fn count_votes_19(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     Ok(vote_counts)
 }
 
+
+pub fn count_votes_20(choices: &[Choice]) -> Result<Vec<VoteCount>> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let file_size = file.metadata()?.len() as usize;
+
+    let mut data = Vec::with_capacity(file_size);
+    file.read_to_end(&mut data)?;
+    
+    let duration_read = start_read.elapsed();
+    
+    let min_bytes_per_line = 32;
+    let max_n_lines = file_size / min_bytes_per_line;
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
+        max_n_lines, 
+        Default::default()
+    );
+
+    let mut user_id_hash: &[u8];
+    let mut choice: &[u8];
+    let mut commas: memchr::Memchr;
+
+    for line in fast_split(&data, b'\n') {
+        commas = memchr_iter(b',', line);
+
+        user_id_hash = match commas.next() {
+            Some(comma) => &line[..comma],
+            None => continue,
+        };
+
+        choice = match commas.next() {
+            Some(comma) => &line[comma + 1..],
+            None => continue,
+        };
+
+
+        latest_votes.insert(user_id_hash, choice);
+    }
+        
+
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_default() += 1;
+    }
+        
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_20 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+pub enum MatchChar {
+    Comma1,
+    Comma2,
+    Newline,
+}
+
+pub fn count_votes_21(choices: &[Choice]) -> Result<Vec<VoteCount>> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let file_size = file.metadata()?.len() as usize;
+
+    let mut data = Vec::with_capacity(file_size);
+    file.read_to_end(&mut data)?;
+    
+    let duration_read = start_read.elapsed();
+    
+    let min_bytes_per_line = 32;
+    let max_n_lines = file_size / min_bytes_per_line;
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
+        max_n_lines, 
+        Default::default()
+    );
+
+    let mut matches =  memchr2_iter(b'\n', b',', &data);    
+    
+    
+    
+    // let matches2 = matches.fold()
+    
+    let mut prev_newline = 0;
+    let mut user_id_hash: &[u8];
+    let mut choice: &[u8];
+    while let (Some(c1), Some(c2), Some(newline)) = (matches.next(), matches.next(), matches.next()) {
+        user_id_hash = &data[prev_newline..c1];
+        choice = &data[c2 + 1..newline];
+    
+        // Overwrite the latest vote for the user
+        latest_votes.insert(user_id_hash, choice);
+        prev_newline = newline;
+    }
+    
+    // let mut c2 = 0;
+    // let mut prev_newline = 0;
+    // let mut user_id_hash: &[u8] = &[];
+    // let mut choice: &[u8];
+    // let mut match_type = MatchChar::Comma1;
+    // for m in matches {
+    //     match match_type {
+    //         MatchChar::Comma1 => {
+    //             user_id_hash = &data[prev_newline..m];
+    //             match_type = MatchChar::Comma2;
+    //         },
+    //         MatchChar::Comma2 => {
+    //             c2 = m;
+    //             match_type = MatchChar::Newline;
+    //         },
+    //         MatchChar::Newline => {
+    //             choice = &data[c2 + 1..m];
+    //             latest_votes.insert(user_id_hash, choice);
+    //             prev_newline = m;
+    //             match_type = MatchChar::Comma1;
+    //         }
+    //     }
+    // }
+
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_default() += 1;
+    }
+        
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_21 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}
+
+
+
+pub fn count_votes_22(choices: &[Choice]) -> Result<Vec<VoteCount>> {
+    let start_total = Instant::now();
+
+    // Open the file and read it into a buffer
+    let start_read = Instant::now();
+    let mut file = File::open("cl.csv")?;
+    let file_size = file.metadata()?.len() as usize;
+
+    let mut data = Vec::with_capacity(file_size);
+    file.read_to_end(&mut data)?;
+    
+    let duration_read = start_read.elapsed();
+    
+    let min_bytes_per_line = 32;
+    let max_n_lines = file_size / min_bytes_per_line;
+    let start_process = Instant::now();
+
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
+        max_n_lines, 
+        Default::default()
+    );
+
+    let matches =  memchr2_iter(b'\n', b',', &data); 
+
+    let mut i = 0;
+    let mut c1 = 0;
+    let mut c2 = 0;
+    let mut prev_newline = 0;
+    matches
+        .filter_map(|match_idx| {
+            match i {
+                0 => {
+                    c1 = match_idx;
+                    i = 1;
+                    None
+                },
+                1 => {
+                    c2 = match_idx;
+                    i = 2;
+                    None
+                },
+                2 => {
+                    i = 0;
+                    let user_id_hash = &data[prev_newline..c1];
+                    let choice = &data[c2 + 1..match_idx];
+                    prev_newline = match_idx;
+                    Some((user_id_hash, choice))
+
+                },
+                _ => None
+            }
+        }).for_each(|(user_id_hash, choice)| {
+            latest_votes.insert(user_id_hash, choice);
+        });
+
+    // fast_split(&data, b'\n')
+    //     .filter_map(|line| {
+    //         let mut commas = memchr_iter(b',', line);
+
+    //         let c1 = commas.next()?;
+    //         let c2 = commas.next()?;
+    //         let user_id_hash = &line[..c1];
+    //         let choice = &line[c2 + 1..];
+    //         Some((user_id_hash, choice))
+    //     }).for_each(|(user_id_hash, choice)| {
+    //         latest_votes.insert(user_id_hash, choice);
+    //     });
+
+
+    let duration_process = start_process.elapsed();
+
+    // Count the votes
+    let start_count = Instant::now();
+
+    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
+        choices.iter()
+        .map(|choice| (choice.key.as_bytes(), 0))
+    );
+
+    for choice in latest_votes.values() {
+        *counts.entry(*choice).or_default() += 1;
+    }
+        
+    let duration_count = start_count.elapsed();
+
+    // Convert counts to a vector of VoteCount
+    let vote_counts: Vec<VoteCount> = counts
+        .into_iter()
+        .map(|(choice, count)| VoteCount {
+            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+            count,
+        })
+        .collect();
+
+    let duration_total = start_total.elapsed();
+    info!("count_votes_22 - total {:?}  -  open and buffer file: {:?}, process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_read, duration_process, duration_count
+    );
+
+    Ok(vote_counts)
+}

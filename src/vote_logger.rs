@@ -1,7 +1,7 @@
 use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::Receiver;
 
-use crate::Result;
+use crate::errors::Result;
 
 pub struct VLCLMessage {
     pub vl_data: Vec<u8>,

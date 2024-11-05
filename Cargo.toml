@@ -27,3 +27,10 @@ thiserror = "1.0.68"
 tokio = "1.41.0"
 sqlx = { version = "0.6", features = ["sqlite", "runtime-actix-native-tls", "macros"] }
 
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "benchmark_count_funcs"
+harness = false
