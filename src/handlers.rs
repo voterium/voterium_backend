@@ -106,7 +106,8 @@ pub async fn submit_vote1p1(
 
     // Verify that the choice is valid
     if !app_state.config.choices.iter().any(|c| c.key == vote.choice) {
-        let message = format!("Choice must be one of {:?}. Received: {:?}", app_state.config.choices, vote.choice);
+        let choices = app_state.config.choices.iter().map(|c| c.key.clone()).collect::<Vec<String>>().join(", ");
+        let message = format!("Choice must be one of {:?}. Received: {:?}", choices, vote.choice);
         return Err(AppError::BadRequest{ title: "Invalid choice".to_string(), message });
     };
 
