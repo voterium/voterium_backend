@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Read;
 use std::time::Instant;
 
+use crate::Result;
 
 fn fast_split(data: &[u8], delimiter: u8) -> impl Iterator<Item = &[u8]> {
     memchr_iter(delimiter, data)
@@ -17,7 +18,7 @@ fn fast_split(data: &[u8], delimiter: u8) -> impl Iterator<Item = &[u8]> {
 }
 
 
-pub fn count_votes(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error> {
+pub fn count_votes(choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Open the file and read it into a buffer
@@ -38,19 +39,17 @@ pub fn count_votes(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error>
         max_n_lines, 
         Default::default()
     );
-
     
     for line in fast_split(&data, b'\n') {
         let mut commas = memchr_iter(b',', line);
-        if let Some(c1) = commas.next() {
-            if let Some(c2) = commas.next() {
-                let user_id_hash = &line[..c1];
-                let choice = &line[c2 + 1..];
 
-                // // Overwrite the latest vote for the user
-                latest_votes.insert(user_id_hash, choice);
-            }
-        }
+        let Some(c1) = commas.next() else { continue };
+        let Some(c2) = commas.next() else { continue };
+        
+        let user_id_hash = &line[..c1];
+        let choice = &line[c2 + 1..];
+
+        latest_votes.insert(user_id_hash, choice);
     }
 
     let duration_process = start_process.elapsed();
@@ -85,3 +84,5 @@ pub fn count_votes(choices: &[Choice]) -> Result<Vec<VoteCount>, std::io::Error>
 
     Ok(vote_counts)
 }
+
+

@@ -5,6 +5,7 @@ mod handlers;
 mod models;
 mod utils;
 mod vote_logger;
+mod errors;
 
 use actix_cors::Cors;
 use actix_web::middleware::from_fn;
@@ -19,6 +20,8 @@ use std::env;
 use std::fs::{self, File};
 use std::io::Read;
 use tokio;
+
+pub use crate::errors::{Result, AppError};
 
 async fn load_app_state() -> models::AppState {
     // Get the backend salt from the environment variable
@@ -104,6 +107,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/voting")
                     // .service(handlers::submit_vote)
+                    // .service(handlers::submit_vote1p1)
                     .service(handlers::submit_vote2)
                     // .service(handlers::submit_vote3)
                     .service(handlers::get_results)

@@ -1,27 +1,7 @@
-use std::io::Write;
+use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::Receiver;
 
-pub struct ChannelMessage {
-    pub data: Vec<u8>,
-    pub resp: tokio::sync::oneshot::Sender<bool>,
-}
-
-pub async fn write_lines_to_file(file_path: &str, mut rx: Receiver<ChannelMessage>) -> Result<(), std::io::Error> {
-    // Open the file in append mode
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(file_path)?;
-
-    loop {
-        let msg = rx.recv().await.expect("Should receive task not error");
-        let line = msg.data;
-        file.write_all(&line)?;
-
-        msg.resp.send(true).expect("Should send response");
-    }
-}
-
+use crate::Result;
 
 pub struct VLCLMessage {
     pub vl_data: Vec<u8>,
@@ -29,22 +9,28 @@ pub struct VLCLMessage {
     pub resp: tokio::sync::oneshot::Sender<bool>,
 }
 
-pub async fn write_cl_vl(mut rx: Receiver<VLCLMessage>) -> Result<(), std::io::Error> {
+pub async fn write_cl_vl(mut rx: Receiver<VLCLMessage>) -> Result<()> {
     // Open the file in append mode
-    let mut vl_file = std::fs::OpenOptions::new()
+    let mut vl = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open("vl.csv")?;
 
-    let mut cl_file = std::fs::OpenOptions::new()
+    // let mut vl = BufWriter::new(vl_file);
+
+    let mut cl = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open("cl.csv")?;
 
+    // let mut cl = BufWriter::new(cl_file);
+
     loop {
         let msg = rx.recv().await.expect("Should receive task not error");
-        vl_file.write_all(&msg.vl_data)?;
-        cl_file.write_all(&msg.cl_data)?;
-        msg.resp.send(true).expect("Should send response");
+        // vl.write(&msg.vl_data)?;
+        // cl.write(&msg.cl_data)?;
+        vl.write_all(&msg.vl_data)?;
+        cl.write_all(&msg.cl_data)?;
+        // msg.resp.send(true).expect("Should send response");
     }
 }

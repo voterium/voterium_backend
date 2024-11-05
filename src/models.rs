@@ -3,7 +3,7 @@ use jsonwebtoken::DecodingKey;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 
-use crate::vote_logger::{ChannelMessage, VLCLMessage};
+use crate::vote_logger::VLCLMessage;
 
 #[derive(Deserialize)]
 pub struct Vote {
@@ -48,8 +48,6 @@ pub struct AppState {
     pub decoding_key: DecodingKey,
     pub clickhouse_client: Client,
     pub channel_sender: Sender<VLCLMessage>,
-    // pub channel_sender_vl: Sender<ChannelMessage>,
-    // pub channel_sender_cl: Sender<ChannelMessage>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
