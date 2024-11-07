@@ -403,6 +403,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40723b8fb387abc38f4f4a37c09073622e41dd12327033091ef8950659e6dc0c"
 dependencies = [
  "memchr",
+ "regex-automata",
+ "serde",
 ]
 
 [[package]]
@@ -2528,8 +2530,10 @@ dependencies = [
  "actix-cors",
  "actix-rt",
  "actix-web",
+ "ahash 0.8.11",
  "base64 0.22.1",
  "blake2",
+ "bstr",
  "chrono",
  "clickhouse",
  "criterion",

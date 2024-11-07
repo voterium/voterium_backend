@@ -1,8 +1,6 @@
 use crate::models::{AppState, Claims};
 use actix_web::{error, http::header, web};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
-use rand::{rngs::OsRng, RngCore};
 
 use actix_web::{
     body::{BoxBody, EitherBody, MessageBody},

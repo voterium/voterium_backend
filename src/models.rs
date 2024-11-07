@@ -1,4 +1,3 @@
-use clickhouse::{error::Error as ClickHouseError, Client, Row};
 use jsonwebtoken::DecodingKey;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
@@ -10,24 +9,12 @@ pub struct Vote {
     pub choice: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct VoteCount {
     pub choice: String,
     pub count: u32,
 }
 
-#[derive(Clone)]
-pub struct CLVote {
-    pub user_id_hash: String,
-    pub timestamp: i64,
-    pub choice: String,
-}
-
-#[derive(Clone)]
-pub struct VLVote {
-    pub vote_id: String,
-    pub choice: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Choice {
@@ -46,7 +33,6 @@ pub struct AppState {
     pub backend_salt: Vec<u8>,
     pub config: Config,
     pub decoding_key: DecodingKey,
-    pub clickhouse_client: Client,
     pub channel_sender: Sender<VLCLMessage>,
 }
 

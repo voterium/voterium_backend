@@ -1,10 +1,11 @@
-use std::{fs::File, io::Read};
+use std::{env, fs::{self, File}, io::Read};
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use blake2::{digest::consts::U12, Blake2b, Digest};
+use jsonwebtoken::DecodingKey;
 use rand::{rngs::OsRng, RngCore};
 
-use crate::{errors::Result, models::Config};
+use crate::{errors::Result, models::Config, vote_logger};
 
 type Blake2b96 = Blake2b<U12>; // 96 bytes = 12 * 8 bits
 
@@ -35,7 +36,7 @@ pub fn gen_random_b64_string(length: usize) -> String {
     URL_SAFE_NO_PAD.encode(&random_bytes)
 }
 
-pub fn load_voting_config() -> Config {
+pub async fn load_voting_config() -> Config {
     let mut file = File::open("voting_config.json").expect("Failed to open voting_config.json");
     let mut contents = String::new();
     file.read_to_string(&mut contents)
@@ -43,4 +44,30 @@ pub fn load_voting_config() -> Config {
     let config: Config =
         serde_json::from_str(&contents).expect("Failed to parse voting_config.json");
         config
+}
+
+
+pub async fn load_backend_salt() -> Vec<u8> {
+    // Get the backend salt from the environment variable
+    let backend_salt = env::var("BACKEND_SALT").expect("BACKEND_SALT must be set");
+    let backend_salt = URL_SAFE_NO_PAD
+        .decode(&backend_salt)
+        .expect("Invalid BACKEND_SALT; must be valid Base64");
+
+    backend_salt
+}
+
+pub async fn load_public_key() -> DecodingKey {
+    let jwt_public_key_path = env::var("JWT_PUBLIC_KEY_PATH").expect("JWT_PUBLIC_KEY_PATH not set");
+    let public_key_pem = fs::read_to_string(jwt_public_key_path).expect("Failed to read public key");
+    let decoding_key = DecodingKey::from_ed_pem(public_key_pem.as_bytes()).expect("Failed to create DecodingKey from public key");
+    decoding_key
+}
+
+pub async fn spawn_logging_worker() -> tokio::sync::mpsc::Sender<vote_logger::VLCLMessage> {
+    let (sender, mut receiver) = tokio::sync::mpsc::channel(10_000);
+    tokio::spawn(async move {
+        vote_logger::write_cl_vl(receiver).await.unwrap();
+    });
+    sender
 }
