@@ -973,8 +973,8 @@ pub fn count_votes_12(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .map(|choice| (choice.key.as_bytes(), 0))
     );
 
-    let mut choice_keys = choices.iter().map(|choice| choice.key.as_bytes()).collect::<Vec<_>>();
-    for choice in latest_votes.iter().filter_map(|(key, value)| 
+    let choice_keys = choices.iter().map(|choice| choice.key.as_bytes()).collect::<Vec<_>>();
+    for choice in latest_votes.iter().filter_map(|(_, value)| 
         if choice_keys.contains(value) {
             Some(value)
         } else {
@@ -2465,4 +2465,35 @@ pub fn count_votes_34(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
+
+
+use crate::counting::utils::{make_choices_lookup, init_seen_hashset, user_id_hash_u128_from_bytes};
+use super::utils::indexed_counts_to_vote_counts;
+const RECORD_SIZE: usize = 33;
+
+#[allow(dead_code)]
+pub fn count_votes_35(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
+
+    let choice_to_index = make_choices_lookup(choices);
+    let mut seen_users = init_seen_hashset(data);
+    let mut counts = vec![0u32; choices.len()];
+
+    for line in data.chunks_exact(RECORD_SIZE).rev() {
+        let user_id_hash = user_id_hash_u128_from_bytes(&line[..16]);
+
+        let is_latest_vote = seen_users.insert(user_id_hash);
+        if !is_latest_vote {
+            continue
+        }
+
+        let choice  = line[31];
+        if let Some(choice_idx) = choice_to_index.get(&choice) {
+            counts[*choice_idx] += 1;
+        }
+    }
+
+    let vote_counts = indexed_counts_to_vote_counts(&counts, choices);
+
+    Ok(vote_counts)
+}
 

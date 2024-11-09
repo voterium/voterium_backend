@@ -45,6 +45,15 @@ impl<T> From<tokio::sync::mpsc::error::SendError<T>> for AppError {
     }
 }
 
+impl From<tokio::sync::oneshot::error::RecvError> for AppError {
+    fn from(err: tokio::sync::oneshot::error::RecvError) -> AppError {
+        AppError::InternalError {
+            title: "Oneshot receive error".to_string(),
+            message: err.to_string(),
+        }
+    }
+}
+
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> AppError {
         AppError::InternalError {

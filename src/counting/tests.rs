@@ -6,7 +6,7 @@
 mod tests {
     use crate::counting::counting_funcs::*; // Import all items from the parent module.
     use crate::models::{Choice, VoteCount};
-    use crate::counting::load_data;
+    use crate::counting::load_cl;
     use crate::errors::Result;
 
     /// Loads the voting configuration and extracts the choices.
@@ -22,7 +22,7 @@ mod tests {
     fn test_all_count_votes_functions_return_same_value() -> Result<()> {
         // Load choices
         let choices = make_input();
-        let data = load_data("cl_1M_int.csv").unwrap();
+        let data = load_cl("cl_1M_int.csv").unwrap();
 
         fn sorted(vote_counts: Vec<VoteCount>) -> Vec<VoteCount> {
             let mut sorted_counts = vote_counts.clone();

@@ -5,7 +5,7 @@ use blake2::{digest::consts::U12, Blake2b, Digest};
 use jsonwebtoken::DecodingKey;
 use rand::{rngs::OsRng, RngCore};
 
-use crate::{errors::Result, models::Config, vote_logger};
+use crate::{errors::Result, models::{Choice, Config}, vote_logger};
 
 type Blake2b96 = Blake2b<U12>; // 96 bytes = 12 * 8 bits
 
@@ -43,7 +43,23 @@ pub async fn load_voting_config() -> Config {
         .expect("Failed to read voting_config.json");
     let config: Config =
         serde_json::from_str(&contents).expect("Failed to parse voting_config.json");
-        config
+
+    validate_unique_choice_keys(&config.choices);
+    config
+}
+
+
+pub fn validate_unique_choice_keys(choices: &[Choice]) -> () {
+    let mut seen_keys = std::collections::HashSet::new();
+    for choice in choices {
+        if let Some(&first_byte) = choice.key.as_bytes().first() {
+            if !seen_keys.insert(first_byte) {
+                panic!("First byte of choice.key must be unique: {}", choice.key);
+            }
+        } else {
+            panic!("Choice key must not be empty");
+        }
+    }
 }
 
 
@@ -68,6 +84,15 @@ pub async fn spawn_logging_worker() -> tokio::sync::mpsc::Sender<vote_logger::VL
     let (sender, mut receiver) = tokio::sync::mpsc::channel(10_000);
     tokio::spawn(async move {
         vote_logger::write_cl_vl(receiver).await.unwrap();
+    });
+    sender
+}
+
+pub async fn spawn_cache_worker(choices: Vec<Choice>) -> tokio::sync::mpsc::Sender<vote_logger::CountsCacheMsg> {
+    let (sender, receiver) = tokio::sync::mpsc::channel(10_000);
+    tokio::spawn(async move {
+        let cl_filepath = "cl.csv";
+        vote_logger::vote_counts_cache(receiver, cl_filepath, &choices).await.unwrap();
     });
     sender
 }

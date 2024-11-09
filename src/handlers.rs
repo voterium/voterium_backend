@@ -1,9 +1,9 @@
-use crate::counting::{count_votes, load_data};
+use crate::counting::{count_votes, load_cl};
 use crate::errors::{AppError, Result};
 use crate::models::{AppState, Claims, Vote};
 use crate::utils::gen_random_b64_string;
 use crate::utils::hash_user_id;
-use crate::vote_logger::VLCLMessage;
+use crate::vote_logger::{CountsCacheMsg, VLCLMessage};
 use actix_web::HttpMessage;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use chrono::Utc;
@@ -56,11 +56,12 @@ pub async fn submit_vote(
     };
 
     let start_vl_cl = Instant::now();
-    let sender = &app_state.channel_sender;
+    let sender = &app_state.logging_channel_sender;
     // let (resp_tx, resp_rx) = oneshot::channel::<bool>();
+    let cl_line = format!("{},{},{}\n", user_id_hash, timestamp, vote.choice).into_bytes();
     let msg = VLCLMessage {
         vl_data: format!("{},{}\n", vote_id, vote.choice).into_bytes(),
-        cl_data: format!("{},{},{}\n", user_id_hash, timestamp, vote.choice).into_bytes(),
+        cl_data: cl_line.clone(),
         // resp: resp_tx,
     };
 
@@ -68,6 +69,12 @@ pub async fn submit_vote(
     // resp_rx.await.expect("Error receiving response from channel");
 
     let vl_cl_duration = start_vl_cl.elapsed();
+
+    let cache_sender = &app_state.cache_channel_sender;
+    cache_sender
+        .send(CountsCacheMsg::Vote { cl_line })
+        .await?;
+
 
     let total_duration = start_vote.elapsed();
     info!(
@@ -81,10 +88,14 @@ pub async fn submit_vote(
 
 #[get("/results")]
 pub async fn get_results(app_state: web::Data<AppState>) -> Result<HttpResponse> {
-    let allowed_choices = &app_state.config.choices;
+    // let allowed_choices = &app_state.config.choices;
 
-    let cl_data = load_data("cl.csv")?;
-    let mut vote_counts = count_votes(&cl_data, allowed_choices)?;
+    // let cl_data = load_data("cl.csv")?;
+    // let mut vote_counts = count_votes(&cl_data, allowed_choices)?;
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app_state.cache_channel_sender.send(CountsCacheMsg::GetCounts { resp: tx }).await?;
+    let mut vote_counts = rx.await?;
     vote_counts.sort_by(|a, b| a.choice.cmp(&b.choice));
 
     Ok(HttpResponse::Ok().json(vote_counts))

@@ -12,7 +12,10 @@ use actix_web::{middleware::Logger, web, App, HttpServer};
 use dotenv::dotenv;
 use env_logger::Env;
 use models::AppState;
-use utils::{load_backend_salt, load_public_key, load_voting_config, spawn_logging_worker};
+use utils::{
+    load_backend_salt, load_public_key, load_voting_config, spawn_cache_worker,
+    spawn_logging_worker,
+};
 
 pub use crate::errors::{AppError, Result};
 
@@ -21,11 +24,13 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
+    let config = load_voting_config().await;
     let state = AppState {
         backend_salt: load_backend_salt().await,
         decoding_key: load_public_key().await,
-        channel_sender: spawn_logging_worker().await,
-        config: load_voting_config().await,
+        logging_channel_sender: spawn_logging_worker().await,
+        cache_channel_sender: spawn_cache_worker(config.choices.clone()).await,
+        config,
     };
 
     HttpServer::new(move || {
