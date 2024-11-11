@@ -4,7 +4,7 @@ mod errors;
 mod handlers;
 mod models;
 mod utils;
-mod vote_logger;
+mod workers;
 
 use actix_cors::Cors;
 use actix_web::middleware::from_fn;
@@ -13,8 +13,8 @@ use dotenv::dotenv;
 use env_logger::Env;
 use models::AppState;
 use utils::{
-    load_backend_salt, load_public_key, load_voting_config, spawn_cache_worker,
-    spawn_logging_worker,
+    load_backend_salt, load_cl_filepath, load_public_key, load_vl_filepath, load_voting_config,
+    spawn_count_worker, spawn_ledger_worker,
 };
 
 pub use crate::errors::{AppError, Result};
@@ -25,11 +25,13 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     let config = load_voting_config().await;
+    let cl_filepath = load_cl_filepath().await;
+    let vl_filepath = load_vl_filepath().await;
     let state = AppState {
         backend_salt: load_backend_salt().await,
         decoding_key: load_public_key().await,
-        logging_channel_sender: spawn_logging_worker().await,
-        cache_channel_sender: spawn_cache_worker(config.choices.clone()).await,
+        ledger_channel_sender: spawn_ledger_worker(&cl_filepath, &vl_filepath).await,
+        count_channel_sender: spawn_count_worker(config.choices.clone(), &cl_filepath).await,
         config,
     };
 
