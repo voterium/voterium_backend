@@ -1,4 +1,3 @@
-use crate::counting::{count_votes, load_cl};
 use crate::errors::{AppError, Result};
 use crate::models::{AppState, Ballot, Choice, Claims, CountWorkerBallot, CountWorkerMsg, LedgerWorkerMsg, Vote};
 use crate::utils::gen_random_b64_string;
