@@ -1,19 +1,16 @@
 // Various implementations of vote counting to compare performance
 
+use crate::errors::Result;
 use crate::models::{Choice, VoteCount};
-use log::info;
-use memchr::{memchr, memchr2_iter, memchr_iter};
-use rustc_hash::{FxHashMap, FxHashSet};
 use core::str;
+use log::info;
+use memchr::{memchr, memchr_iter};
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Seek;
 use std::io::{BufReader, Read};
 use std::time::Instant;
-
-use crate::errors::Result;
-
-
 
 #[derive(Clone)]
 pub struct CLVote {
@@ -26,20 +23,19 @@ pub struct CLVote {
 fn data_to_lines(data: &[u8]) -> impl Iterator<Item = &str> {
     // Attempt to convert the entire byte slice to a &str
     let text = str::from_utf8(data).expect("Data is not valid UTF-8");
-    
+
     // Split the &str on '\n' and collect into a vector
     text.split('\n')
 }
 
 #[allow(dead_code)]
-pub fn count_votes_01(data: &[u8], ) -> Result<Vec<VoteCount>> {
+pub fn count_votes_01(data: &[u8]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
     let mut votes: Vec<CLVote> = Vec::new();
 
     // Parse lines
     let start_parse = Instant::now();
     for line in data_to_lines(data) {
-
         let parts: Vec<&str> = line.trim().split(',').collect();
         if parts.len() != 3 {
             continue; // Skip malformed lines
@@ -157,7 +153,7 @@ pub fn count_votes_01(data: &[u8], ) -> Result<Vec<VoteCount>> {
 // }
 
 #[allow(dead_code)]
-pub fn count_votes_03(data: &[u8], ) -> Result<Vec<VoteCount>> {
+pub fn count_votes_03(data: &[u8]) -> Result<Vec<VoteCount>> {
     use std::time::Instant;
 
     let start_total = Instant::now();
@@ -194,7 +190,6 @@ pub fn count_votes_03(data: &[u8], ) -> Result<Vec<VoteCount>> {
 
         // Overwrite the latest vote for the user
         latest_votes.insert(user_id_hash.to_string(), choice.to_string());
-
     }
     let duration_process = start_process.elapsed();
 
@@ -213,8 +208,10 @@ pub fn count_votes_03(data: &[u8], ) -> Result<Vec<VoteCount>> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_3 - total {:?} process votes to latest_votes {:?}, count votes {:?}",
-             duration_total, duration_process, duration_count);
+    info!(
+        "count_votes_3 - total {:?} process votes to latest_votes {:?}, count votes {:?}",
+        duration_total, duration_process, duration_count
+    );
 
     Ok(vote_counts)
 }
@@ -234,7 +231,7 @@ fn count_lines_fast(reader: &mut BufReader<File>) -> Result<usize> {
     Ok(line_count)
 }
 
-pub fn count_votes_04(data: &[u8], ) -> Result<Vec<VoteCount>> {
+pub fn count_votes_04(data: &[u8]) -> Result<Vec<VoteCount>> {
     use std::time::Instant;
 
     let start_total = Instant::now();
@@ -271,7 +268,6 @@ pub fn count_votes_04(data: &[u8], ) -> Result<Vec<VoteCount>> {
 
         // Overwrite the latest vote for the user
         latest_votes.insert(user_id_hash.to_string(), choice.to_string());
-
     }
     let duration_process = start_process.elapsed();
 
@@ -290,7 +286,8 @@ pub fn count_votes_04(data: &[u8], ) -> Result<Vec<VoteCount>> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_4 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_4 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
@@ -375,7 +372,7 @@ pub fn count_votes_04(data: &[u8], ) -> Result<Vec<VoteCount>> {
 // }
 
 #[allow(dead_code)]
-pub fn count_votes_06(data: &[u8], ) -> Result<Vec<VoteCount>> {
+pub fn count_votes_06(data: &[u8]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     let start_process = Instant::now();
@@ -438,13 +435,13 @@ pub fn count_votes_06(data: &[u8], ) -> Result<Vec<VoteCount>> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_6 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_6 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 // pub fn count_votes_07(data: &[u8], ) -> Result<Vec<VoteCount>> {
 //     let start_total = Instant::now();
@@ -584,9 +581,8 @@ pub fn count_votes_06(data: &[u8], ) -> Result<Vec<VoteCount>> {
 //     Ok(vote_counts)
 // }
 
-
 #[allow(dead_code)]
-pub fn count_votes_08(data: &[u8], ) -> Result<Vec<VoteCount>> {
+pub fn count_votes_08(data: &[u8]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     let start_process = Instant::now();
@@ -650,13 +646,15 @@ pub fn count_votes_08(data: &[u8], ) -> Result<Vec<VoteCount>> {
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_8 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_8 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
 
+#[allow(dead_code)]
 fn find_new_line_pos(bytes: &[u8]) -> Option<usize> {
     // In this case (position is not far enough),
     // naive version is faster than bstr (memchr)
@@ -813,10 +811,8 @@ pub fn count_votes_10(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: HashMap<&[u8], u32> = HashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: HashMap<&[u8], u32> =
+        HashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
@@ -833,13 +829,13 @@ pub fn count_votes_10(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_10 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_10 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_11(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -889,15 +885,12 @@ pub fn count_votes_11(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
-        
 
     let duration_count = start_count.elapsed();
 
@@ -911,13 +904,13 @@ pub fn count_votes_11(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_11 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_11 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_12(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -968,19 +961,20 @@ pub fn count_votes_12(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
-    let choice_keys = choices.iter().map(|choice| choice.key.as_bytes()).collect::<Vec<_>>();
-    for choice in latest_votes.iter().filter_map(|(_, value)| 
+    let choice_keys = choices
+        .iter()
+        .map(|choice| choice.key.as_bytes())
+        .collect::<Vec<_>>();
+    for choice in latest_votes.iter().filter_map(|(_, value)| {
         if choice_keys.contains(value) {
             Some(value)
         } else {
             None
         }
-    ) {
+    }) {
         *counts.entry(*choice).or_insert(0) += 1;
     }
 
@@ -996,7 +990,8 @@ pub fn count_votes_12(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_12 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_12 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
@@ -1039,15 +1034,12 @@ pub fn count_votes_13(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
-        
 
     let duration_count = start_count.elapsed();
 
@@ -1061,13 +1053,13 @@ pub fn count_votes_13(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_13 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_13 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_14(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1101,15 +1093,12 @@ pub fn count_votes_14(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
-        
 
     let duration_count = start_count.elapsed();
 
@@ -1123,7 +1112,8 @@ pub fn count_votes_14(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_14 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_14 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
@@ -1173,15 +1163,12 @@ pub fn count_votes_15(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
-        
 
     let duration_count = start_count.elapsed();
 
@@ -1195,24 +1182,22 @@ pub fn count_votes_15(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_15 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_15 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
 
-
 fn fast_split(data: &[u8], delimiter: u8) -> impl Iterator<Item = &[u8]> {
     // use memchr_iter
-    memchr_iter(delimiter, data)
-        .scan(0, |start, end| {
-            let slice = &data[*start..end];
-            *start = end + 1;
-            Some(slice)
-        })
+    memchr_iter(delimiter, data).scan(0, |start, end| {
+        let slice = &data[*start..end];
+        *start = end + 1;
+        Some(slice)
+    })
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_16(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1235,21 +1220,17 @@ pub fn count_votes_16(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         }
     }
 
-
     let duration_process = start_process.elapsed();
 
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_insert(0) += 1;
     }
-        
 
     let duration_count = start_count.elapsed();
 
@@ -1263,72 +1244,71 @@ pub fn count_votes_16(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_16 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_16 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
 
+// #[allow(dead_code)]
+// pub fn count_votes_17(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
+//     let start_total = Instant::now();
 
-#[allow(dead_code)]
-pub fn count_votes_17(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
-    let start_total = Instant::now();
+//     let start_process = Instant::now();
 
-    let start_process = Instant::now();
+//     let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
 
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::default();
-    
-    
-    let mut matches =  memchr2_iter(b'\n', b',', &data);    
-    let mut prev_newline = 0;
+//     let mut matches = memchr2_iter(b'\n', b',', &data);
+//     let mut prev_newline = 0;
 
-    let mut user_id_hash: &[u8];
-    let mut choice: &[u8];
+//     let mut user_id_hash: &[u8];
+//     let mut choice: &[u8];
 
-    while let (Some(c1), Some(c2), Some(newline)) = (matches.next(), matches.next(), matches.next()) {
-        user_id_hash = &data[prev_newline..c1];
-        choice = &data[c2 + 1..newline];
+//     while let (Some(c1), Some(c2), Some(newline)) = (matches.next(), matches.next(), matches.next())
+//     {
+//         user_id_hash = &data[prev_newline..c1];
+//         choice = &data[c2 + 1..newline];
 
-        // Overwrite the latest vote for the user
-        latest_votes.insert(user_id_hash, choice);
-        prev_newline = newline;
-    }
+//         // Overwrite the latest vote for the user
+//         latest_votes.insert(user_id_hash, choice);
+//         prev_newline = newline;
+//     }
 
-    let duration_process = start_process.elapsed();
+//     println!("count_votes_17 latest_votes {:?}", latest_votes);
 
-    // Count the votes
-    let start_count = Instant::now();
+//     let duration_process = start_process.elapsed();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+//     // Count the votes
+//     let start_count = Instant::now();
 
-    for choice in latest_votes.values() {
-        *counts.entry(*choice).or_insert(0) += 1;
-    }
-        
+//     let mut counts: FxHashMap<&[u8], u32> =
+//         FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
-    let duration_count = start_count.elapsed();
+//     for choice in latest_votes.values() {
+//         *counts.entry(*choice).or_insert(0) += 1;
+//     }
 
-    // Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = counts
-        .into_iter()
-        .map(|(choice, count)| VoteCount {
-            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
-            count,
-        })
-        .collect();
+//     let duration_count = start_count.elapsed();
 
-    let duration_total = start_total.elapsed();
-    info!("count_votes_17 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
-        duration_total, duration_process, duration_count
-    );
+//     // Convert counts to a vector of VoteCount
+//     let vote_counts: Vec<VoteCount> = counts
+//         .into_iter()
+//         .map(|(choice, count)| VoteCount {
+//             choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+//             count,
+//         })
+//         .collect();
 
-    Ok(vote_counts)
-}
+//     let duration_total = start_total.elapsed();
+//     info!(
+//         "count_votes_17 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+//         duration_total, duration_process, duration_count
+//     );
 
+//     Ok(vote_counts)
+// }
 
 #[allow(dead_code)]
 pub fn count_votes_18(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1336,12 +1316,9 @@ pub fn count_votes_18(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     let start_process = Instant::now();
 
-
     let max_n_lines = data.len() / 33; // Average line length is 33 bytes
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     for line in fast_split(&data, b'\n') {
         let mut commas = memchr_iter(b',', line);
@@ -1361,15 +1338,13 @@ pub fn count_votes_18(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1382,54 +1357,48 @@ pub fn count_votes_18(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_18 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_18 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
 
-
 #[allow(dead_code)]
 pub fn count_votes_19(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
-    
+
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line;
     let start_process = Instant::now();
 
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
-    fast_split(&data, b'\n')
-        .for_each(|line| {
-            let mut commas = memchr_iter(b',', line);
+    fast_split(&data, b'\n').for_each(|line| {
+        let mut commas = memchr_iter(b',', line);
 
-            let Some(c1) = commas.next() else { return };
-            let Some(c2) = commas.next() else { return };
-            let user_id_hash = &line[..c1];
-            let choice = &line[c2 + 1..];
+        let Some(c1) = commas.next() else { return };
+        let Some(c2) = commas.next() else { return };
+        let user_id_hash = &line[..c1];
+        let choice = &line[c2 + 1..];
 
-            latest_votes.insert(user_id_hash, choice);
-        });
-
+        latest_votes.insert(user_id_hash, choice);
+    });
 
     let duration_process = start_process.elapsed();
 
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1442,26 +1411,24 @@ pub fn count_votes_19(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_19 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_19 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
 
-
 #[allow(dead_code)]
 pub fn count_votes_20(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
-    
+
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line;
     let start_process = Instant::now();
 
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     let mut user_id_hash: &[u8];
     let mut choice: &[u8];
@@ -1480,26 +1447,21 @@ pub fn count_votes_20(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
             None => continue,
         };
 
-
         latest_votes.insert(user_id_hash, choice);
     }
-        
-
 
     let duration_process = start_process.elapsed();
 
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1512,13 +1474,13 @@ pub fn count_votes_20(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_20 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_20 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 pub enum MatchChar {
     Comma1,
@@ -1526,79 +1488,74 @@ pub enum MatchChar {
     Newline,
 }
 
-#[allow(dead_code)]
-pub fn count_votes_21(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
-    let start_total = Instant::now();
-    
-    let min_bytes_per_line = 32;
-    let max_n_lines = data.len() / min_bytes_per_line;
-    let start_process = Instant::now();
+// #[allow(dead_code)]
+// pub fn count_votes_21(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
+//     let start_total = Instant::now();
 
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
+//     let min_bytes_per_line = 32;
+//     let max_n_lines = data.len() / min_bytes_per_line;
+//     let start_process = Instant::now();
 
-    let mut matches =  memchr2_iter(b'\n', b',', &data);    
-    
-    let mut prev_newline = 0;
-    let mut user_id_hash: &[u8];
-    let mut choice: &[u8];
-    while let (Some(c1), Some(c2), Some(newline)) = (matches.next(), matches.next(), matches.next()) {
-        user_id_hash = &data[prev_newline..c1];
-        choice = &data[c2 + 1..newline];
-    
-        // Overwrite the latest vote for the user
-        latest_votes.insert(user_id_hash, choice);
-        prev_newline = newline;
-    }
+//     let mut latest_votes: FxHashMap<&[u8], &[u8]> =
+//         FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
-    let duration_process = start_process.elapsed();
+//     let mut matches = memchr2_iter(b'\n', b',', &data);
 
-    // Count the votes
-    let start_count = Instant::now();
+//     let mut prev_newline = 0;
+//     let mut user_id_hash: &[u8];
+//     let mut choice: &[u8];
+//     while let (Some(c1), Some(c2), Some(newline)) = (matches.next(), matches.next(), matches.next())
+//     {
+//         user_id_hash = &data[prev_newline..c1];
+//         choice = &data[c2 + 1..newline];
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+//         // Overwrite the latest vote for the user
+//         latest_votes.insert(user_id_hash, choice);
+//         prev_newline = newline;
+//     }
 
-    for choice in latest_votes.values() {
-        *counts.entry(*choice).or_default() += 1;
-    }
-        
-    let duration_count = start_count.elapsed();
+//     let duration_process = start_process.elapsed();
 
-    // Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = counts
-        .into_iter()
-        .map(|(choice, count)| VoteCount {
-            choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
-            count,
-        })
-        .collect();
+//     // Count the votes
+//     let start_count = Instant::now();
 
-    let duration_total = start_total.elapsed();
-    info!("count_votes_21 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
-        duration_total, duration_process, duration_count
-    );
+//     let mut counts: FxHashMap<&[u8], u32> =
+//         FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
-    Ok(vote_counts)
-}
+//     for choice in latest_votes.values() {
+//         *counts.entry(*choice).or_default() += 1;
+//     }
 
+//     let duration_count = start_count.elapsed();
+
+//     // Convert counts to a vector of VoteCount
+//     let vote_counts: Vec<VoteCount> = counts
+//         .into_iter()
+//         .map(|(choice, count)| VoteCount {
+//             choice: std::str::from_utf8(choice).unwrap_or("").to_string(),
+//             count,
+//         })
+//         .collect();
+
+//     let duration_total = start_total.elapsed();
+//     info!(
+//         "count_votes_21 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+//         duration_total, duration_process, duration_count
+//     );
+
+//     Ok(vote_counts)
+// }
 
 #[allow(dead_code)]
 pub fn count_votes_22(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
-    
+
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line;
     let start_process = Instant::now();
 
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     fast_split(data, b'\n')
         .filter_map(|line| {
@@ -1609,25 +1566,23 @@ pub fn count_votes_22(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
             let user_id_hash = &line[..c1];
             let choice = &line[c2 + 1..];
             Some((user_id_hash, choice))
-        }).for_each(|(user_id_hash, choice)| {
+        })
+        .for_each(|(user_id_hash, choice)| {
             latest_votes.insert(user_id_hash, choice);
         });
-
 
     let duration_process = start_process.elapsed();
 
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1640,13 +1595,13 @@ pub fn count_votes_22(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_22 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_22 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_23(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1656,18 +1611,15 @@ pub fn count_votes_23(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line;
-    let mut latest_votes: FxHashMap<&[u8], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
-
+    let mut latest_votes: FxHashMap<&[u8], &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     for line in fast_split(&data, b'\n') {
         let user_id_hash = &line[..16];
         let choice = &line[31..];
 
         // // Overwrite the latest vote for the user
-        latest_votes.insert(user_id_hash , choice);
+        latest_votes.insert(user_id_hash, choice);
     }
 
     let duration_process = start_process.elapsed();
@@ -1675,15 +1627,13 @@ pub fn count_votes_23(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1696,13 +1646,13 @@ pub fn count_votes_23(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_23 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_23 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_24(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1712,11 +1662,8 @@ pub fn count_votes_24(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line;
-    let mut latest_votes: FxHashMap<[u8; 16], &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
-
+    let mut latest_votes: FxHashMap<[u8; 16], &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     let mut user_id_hash: [u8; 16] = [0; 16];
     for line in fast_split(&data, b'\n') {
@@ -1724,7 +1671,7 @@ pub fn count_votes_24(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         let choice = &line[31..];
 
         // // Overwrite the latest vote for the user
-        latest_votes.insert(user_id_hash , choice);
+        latest_votes.insert(user_id_hash, choice);
     }
 
     let duration_process = start_process.elapsed();
@@ -1732,15 +1679,13 @@ pub fn count_votes_24(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1753,13 +1698,13 @@ pub fn count_votes_24(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_24 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_24 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_25(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1769,21 +1714,20 @@ pub fn count_votes_25(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line;
-    let mut latest_votes: FxHashMap<u128, &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
-
+    let mut latest_votes: FxHashMap<u128, &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     // let mut user_id_hash: [u8; 16] = [0; 16];
     for line in fast_split(&data, b'\n') {
         let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Line too short for user_id_hash")
+            line[..16]
+                .try_into()
+                .expect("Line too short for user_id_hash"),
         );
         let choice = &line[31..];
 
         // // Overwrite the latest vote for the user
-        latest_votes.insert(user_id_hash , choice);
+        latest_votes.insert(user_id_hash, choice);
     }
 
     let duration_process = start_process.elapsed();
@@ -1791,15 +1735,13 @@ pub fn count_votes_25(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1812,13 +1754,13 @@ pub fn count_votes_25(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_25 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_25 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 use bstr::ByteSlice;
 
@@ -1830,11 +1772,8 @@ pub fn count_votes_26(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line; // Average line length is 33 bytes
-    let mut latest_votes: FxHashMap<u128, &[u8]> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines, 
-        Default::default()
-    );
-
+    let mut latest_votes: FxHashMap<u128, &[u8]> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     // let mut user_id_hash: [u8; 16] = [0; 16];
     for line in data[..].split_str("\n") {
@@ -1843,12 +1782,14 @@ pub fn count_votes_26(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         }
 
         let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Line too short for user_id_hash")
+            line[..16]
+                .try_into()
+                .expect("Line too short for user_id_hash"),
         );
         let choice = &line[31..];
 
         // // Overwrite the latest vote for the user
-        latest_votes.insert(user_id_hash , choice);
+        latest_votes.insert(user_id_hash, choice);
     }
 
     let duration_process = start_process.elapsed();
@@ -1856,15 +1797,13 @@ pub fn count_votes_26(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Count the votes
     let start_count = Instant::now();
 
-    let mut counts: FxHashMap<&[u8], u32> = FxHashMap::from_iter(
-        choices.iter()
-        .map(|choice| (choice.key.as_bytes(), 0))
-    );
+    let mut counts: FxHashMap<&[u8], u32> =
+        FxHashMap::from_iter(choices.iter().map(|choice| (choice.key.as_bytes(), 0)));
 
     for choice in latest_votes.values() {
         *counts.entry(*choice).or_default() += 1;
     }
-        
+
     let duration_count = start_count.elapsed();
 
     // Convert counts to a vector of VoteCount
@@ -1877,13 +1816,13 @@ pub fn count_votes_26(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
         .collect();
 
     let duration_total = start_total.elapsed();
-    info!("count_votes_26 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
+    info!(
+        "count_votes_26 - total {:?}, process votes to latest_votes {:?}, count votes {:?}",
         duration_total, duration_process, duration_count
     );
 
     Ok(vote_counts)
 }
-
 
 #[allow(dead_code)]
 pub fn count_votes_27(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
@@ -1891,10 +1830,8 @@ pub fn count_votes_27(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     // Step 2: Create a mapping from choice key to index
     let start_choice_mapping = Instant::now();
-    let mut choice_to_index: FxHashMap<&[u8], usize> = FxHashMap::with_capacity_and_hasher(
-        choices.len(),
-        Default::default(),
-    );
+    let mut choice_to_index: FxHashMap<&[u8], usize> =
+        FxHashMap::with_capacity_and_hasher(choices.len(), Default::default());
 
     for (idx, choice) in choices.iter().enumerate() {
         choice_to_index.insert(choice.key.as_bytes(), idx);
@@ -1906,16 +1843,13 @@ pub fn count_votes_27(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     let min_bytes_per_line = 32;
     let max_n_lines = data.len() / min_bytes_per_line; // Average line length is 33 bytes
-    // Using u128 as key for better performance
-    let mut latest_votes: FxHashMap<u128, usize> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+                                                       // Using u128 as key for better performance
+    let mut latest_votes: FxHashMap<u128, usize> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     for line in fast_split(&data, b'\n') {
-        let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Invalid user_id_hash length"),
-        );
+        let user_id_hash =
+            u128::from_le_bytes(line[..16].try_into().expect("Invalid user_id_hash length"));
 
         let choice_bytes = &line[31..]; // Adjust indices as per your data format
 
@@ -1943,7 +1877,8 @@ pub fn count_votes_27(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let duration_count = start_count.elapsed();
 
     // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
+    let vote_counts: Vec<VoteCount> = choices
+        .iter()
         .enumerate()
         .map(|(idx, choice)| VoteCount {
             choice: choice.key.clone(),
@@ -1961,17 +1896,14 @@ pub fn count_votes_27(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
-
 #[allow(dead_code)]
 pub fn count_votes_28(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Step 2: Create a mapping from choice key to index
     let start_choice_mapping = Instant::now();
-    let mut choice_to_index: FxHashMap<&[u8], usize> = FxHashMap::with_capacity_and_hasher(
-        choices.len(),
-        Default::default(),
-    );
+    let mut choice_to_index: FxHashMap<&[u8], usize> =
+        FxHashMap::with_capacity_and_hasher(choices.len(), Default::default());
 
     for (idx, choice) in choices.iter().enumerate() {
         choice_to_index.insert(choice.key.as_bytes(), idx);
@@ -1982,17 +1914,14 @@ pub fn count_votes_28(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let start_process = Instant::now();
 
     const RECORD_SIZE: usize = 33;
-    let max_n_lines = data.len() / RECORD_SIZE + 1; 
+    let max_n_lines = data.len() / RECORD_SIZE + 1;
     // Using u128 as key for better performance
-    let mut latest_votes: FxHashMap<u128, usize> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+    let mut latest_votes: FxHashMap<u128, usize> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     for line in data.chunks_exact(RECORD_SIZE) {
-        let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Invalid user_id_hash length"),
-        );
+        let user_id_hash =
+            u128::from_le_bytes(line[..16].try_into().expect("Invalid user_id_hash length"));
 
         let choice_bytes = &line[31..32]; // Adjust indices as per your data format
 
@@ -2020,7 +1949,8 @@ pub fn count_votes_28(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let duration_count = start_count.elapsed();
 
     // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
+    let vote_counts: Vec<VoteCount> = choices
+        .iter()
         .enumerate()
         .map(|(idx, choice)| VoteCount {
             choice: choice.key.clone(),
@@ -2038,17 +1968,14 @@ pub fn count_votes_28(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
-
 #[allow(dead_code)]
 pub fn count_votes_29(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Step 2: Create a mapping from choice key to index
     let start_choice_mapping = Instant::now();
-    let mut choice_to_index: FxHashMap<&[u8], usize> = FxHashMap::with_capacity_and_hasher(
-        choices.len(),
-        Default::default(),
-    );
+    let mut choice_to_index: FxHashMap<&[u8], usize> =
+        FxHashMap::with_capacity_and_hasher(choices.len(), Default::default());
 
     for (idx, choice) in choices.iter().enumerate() {
         choice_to_index.insert(choice.key.as_bytes(), idx);
@@ -2060,17 +1987,13 @@ pub fn count_votes_29(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     const RECORD_SIZE: usize = 33;
     let max_n_lines = data.len() / RECORD_SIZE + 1;
-    let mut latest_votes: FxHashMap<u128, usize> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+    let mut latest_votes: FxHashMap<u128, usize> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     for line in data.chunks_exact(RECORD_SIZE) {
         let user_id_hash = u128::from_le_bytes([
-            line[0], line[1], line[2], line[3],
-            line[4], line[5], line[6], line[7],
-            line[8], line[9], line[10], line[11],
-            line[12], line[13], line[14], line[15],
+            line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7], line[8],
+            line[9], line[10], line[11], line[12], line[13], line[14], line[15],
         ]);
 
         let choice_bytes = &line[31..32]; // Adjust indices as per your data format
@@ -2099,7 +2022,8 @@ pub fn count_votes_29(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let duration_count = start_count.elapsed();
 
     // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
+    let vote_counts: Vec<VoteCount> = choices
+        .iter()
         .enumerate()
         .map(|(idx, choice)| VoteCount {
             choice: choice.key.clone(),
@@ -2117,7 +2041,6 @@ pub fn count_votes_29(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
-
 use ahash::AHashMap;
 
 #[allow(dead_code)]
@@ -2126,10 +2049,8 @@ pub fn count_votes_30(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     // Step 2: Create a mapping from choice key to index
     let start_choice_mapping = Instant::now();
-    let mut choice_to_index: FxHashMap<&[u8], usize> = FxHashMap::with_capacity_and_hasher(
-        choices.len(),
-        Default::default(),
-    );
+    let mut choice_to_index: FxHashMap<&[u8], usize> =
+        FxHashMap::with_capacity_and_hasher(choices.len(), Default::default());
 
     for (idx, choice) in choices.iter().enumerate() {
         choice_to_index.insert(choice.key.as_bytes(), idx);
@@ -2145,10 +2066,8 @@ pub fn count_votes_30(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     for line in data.chunks_exact(RECORD_SIZE) {
         let user_id_hash = u128::from_le_bytes([
-            line[0], line[1], line[2], line[3],
-            line[4], line[5], line[6], line[7],
-            line[8], line[9], line[10], line[11],
-            line[12], line[13], line[14], line[15],
+            line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7], line[8],
+            line[9], line[10], line[11], line[12], line[13], line[14], line[15],
         ]);
 
         let choice_bytes = &line[31..32]; // Adjust indices as per your data format
@@ -2177,7 +2096,8 @@ pub fn count_votes_30(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let duration_count = start_count.elapsed();
 
     // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
+    let vote_counts: Vec<VoteCount> = choices
+        .iter()
         .enumerate()
         .map(|(idx, choice)| VoteCount {
             choice: choice.key.clone(),
@@ -2195,17 +2115,14 @@ pub fn count_votes_30(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
-
 #[allow(dead_code)]
 pub fn count_votes_31(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
     let start_total = Instant::now();
 
     // Step 2: Create a mapping from choice key to index
     let start_choice_mapping = Instant::now();
-    let mut choice_to_index: FxHashMap<u8, usize> = FxHashMap::with_capacity_and_hasher(
-        choices.len(),
-        Default::default(),
-    );
+    let mut choice_to_index: FxHashMap<u8, usize> =
+        FxHashMap::with_capacity_and_hasher(choices.len(), Default::default());
 
     for (idx, choice) in choices.iter().enumerate() {
         choice_to_index.insert(choice.key.as_bytes()[0], idx);
@@ -2215,19 +2132,15 @@ pub fn count_votes_31(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // Step 3: Process lines to determine the latest vote per user
     let start_process = Instant::now();
 
-
     const RECORD_SIZE: usize = 33;
     let max_n_lines = data.len() / RECORD_SIZE + 1;
     // Using u128 as key for better performance
-    let mut latest_votes: FxHashMap<u128, usize> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+    let mut latest_votes: FxHashMap<u128, usize> =
+        FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
     for line in data.chunks_exact(RECORD_SIZE) {
-        let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Invalid user_id_hash length"),
-        );
+        let user_id_hash =
+            u128::from_le_bytes(line[..16].try_into().expect("Invalid user_id_hash length"));
 
         let choice_byte = &line[31]; // Adjust indices as per your data format
 
@@ -2255,7 +2168,8 @@ pub fn count_votes_31(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let duration_count = start_count.elapsed();
 
     // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
+    let vote_counts: Vec<VoteCount> = choices
+        .iter()
         .enumerate()
         .map(|(idx, choice)| VoteCount {
             choice: choice.key.clone(),
@@ -2273,141 +2187,128 @@ pub fn count_votes_31(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
+// #[allow(dead_code)]
+// pub fn count_votes_32(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
+//     // depends on the `choices` keys being sequential array index
+//     // integers (0, 1, 2, ...)
 
-#[allow(dead_code)]
-pub fn count_votes_32(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
-    // depends on the `choices` keys being sequential array index
-    // integers (0, 1, 2, ...)
+//     let start_total = Instant::now();
 
-    let start_total = Instant::now();
+//     // Step 3: Process lines to determine the latest vote per user
+//     let start_process = Instant::now();
 
-    // Step 3: Process lines to determine the latest vote per user
-    let start_process = Instant::now();
+//     const RECORD_SIZE: usize = 33;
+//     let max_n_lines = data.len() / RECORD_SIZE + 1;
+//     // Using u128 as key for better performance
+//     let mut latest_votes: FxHashMap<u128, usize> =
+//         FxHashMap::with_capacity_and_hasher(max_n_lines, Default::default());
 
-    const RECORD_SIZE: usize = 33;
-    let max_n_lines = data.len() / RECORD_SIZE + 1;
-    // Using u128 as key for better performance
-    let mut latest_votes: FxHashMap<u128, usize> = FxHashMap::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+//     for line in data.chunks_exact(RECORD_SIZE) {
+//         let user_id_hash =
+//             u128::from_le_bytes(line[..16].try_into().expect("Invalid user_id_hash length"));
 
-    for line in data.chunks_exact(RECORD_SIZE) {
-        let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Invalid user_id_hash length"),
-        );
+//         let choice_idx = (line[31] - b'0') as usize;
 
-        let choice_idx = (line[31] - b'0') as usize;
+//         latest_votes.insert(user_id_hash, choice_idx);
+//     }
 
-        latest_votes.insert(user_id_hash, choice_idx);
-    }
+//     let duration_process = start_process.elapsed();
 
-    let duration_process = start_process.elapsed();
+//     // Step 4: Count the votes
+//     let start_count = Instant::now();
 
-    // Step 4: Count the votes
-    let start_count = Instant::now();
+//     // Initialize a counts vector
+//     let mut counts = vec![0u32; choices.len()];
 
-    // Initialize a counts vector
-    let mut counts = vec![0u32; choices.len()];
+//     // Iterate over latest_votes and increment counts
+//     for &choice_idx in latest_votes.values() {
+//         counts[choice_idx] += 1;
+//     }
 
-    // Iterate over latest_votes and increment counts
-    for &choice_idx in latest_votes.values() {
-        counts[choice_idx] += 1;
-    }
+//     let duration_count = start_count.elapsed();
 
-    let duration_count = start_count.elapsed();
+//     // Step 5: Convert counts to a vector of VoteCount
+//     let vote_counts: Vec<VoteCount> = choices
+//         .iter()
+//         .enumerate()
+//         .map(|(idx, choice)| VoteCount {
+//             choice: choice.key.clone(),
+//             count: counts[idx],
+//         })
+//         .collect();
 
-    // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
-        .enumerate()
-        .map(|(idx, choice)| VoteCount {
-            choice: choice.key.clone(),
-            count: counts[idx],
-        })
-        .collect();
+//     let duration_total = start_total.elapsed();
 
-    let duration_total = start_total.elapsed();
+//     info!(
+//         "count_votes_32 - total {:?}, process: {:?}, count: {:?}",
+//         duration_total, duration_process, duration_count
+//     );
 
-    info!(
-        "count_votes_32 - total {:?}, process: {:?}, count: {:?}",
-        duration_total, duration_process, duration_count
-    );
+//     Ok(vote_counts)
+// }
 
-    Ok(vote_counts)
-}
+// #[allow(dead_code)]
+// pub fn count_votes_33(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
+//     // depends on the `choices` keys being sequential array index
+//     // integers (0, 1, 2, ...)
 
+//     let start_total = Instant::now();
 
-#[allow(dead_code)]
-pub fn count_votes_33(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
-    // depends on the `choices` keys being sequential array index
-    // integers (0, 1, 2, ...)
+//     // Step 3: Process lines to determine the latest vote per user
+//     let start_process = Instant::now();
 
-    let start_total = Instant::now();
+//     const RECORD_SIZE: usize = 33;
+//     let max_n_lines = data.len() / RECORD_SIZE + 1;
+//     // // Using u128 as key for better performance
+//     let mut seen: FxHashSet<u128> =
+//         FxHashSet::with_capacity_and_hasher(max_n_lines, Default::default());
 
-    // Step 3: Process lines to determine the latest vote per user
-    let start_process = Instant::now();
+//     // Initialize a counts vector
+//     let mut counts = vec![0u32; choices.len()];
 
-    
-    const RECORD_SIZE: usize = 33;
-    let max_n_lines = data.len() / RECORD_SIZE + 1;
-    // // Using u128 as key for better performance
-    let mut seen: FxHashSet<u128> = FxHashSet::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+//     for line in data.chunks_exact(RECORD_SIZE).rev() {
+//         let user_id_hash =
+//             u128::from_le_bytes(line[..16].try_into().expect("Invalid user_id_hash length"));
 
-    // Initialize a counts vector
-    let mut counts = vec![0u32; choices.len()];
+//         if let Some(_) = seen.replace(user_id_hash) {
+//             // this is not the voters latest vote
+//             continue;
+//         }
 
-    for line in data.chunks_exact(RECORD_SIZE).rev() {
-        let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Invalid user_id_hash length"),
-        );
+//         let choice_idx = (line[31] - b'0') as usize;
+//         counts[choice_idx] += 1;
+//     }
 
+//     let duration_process = start_process.elapsed();
 
-        if let Some(_) = seen.replace(user_id_hash) {
-            // this is not the voters latest vote
-            continue
-        }
+//     // Step 5: Convert counts to a vector of VoteCount
+//     let vote_counts: Vec<VoteCount> = choices
+//         .iter()
+//         .enumerate()
+//         .map(|(idx, choice)| VoteCount {
+//             choice: choice.key.clone(),
+//             count: counts[idx],
+//         })
+//         .collect();
 
-        let choice_idx = (line[31] - b'0') as usize;
-        counts[choice_idx] += 1;
+//     let duration_total = start_total.elapsed();
 
-    }
+//     info!(
+//         "count_votes_33 - total {:?}, process: {:?}",
+//         duration_total, duration_process
+//     );
 
-    let duration_process = start_process.elapsed();
-
-    // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
-        .enumerate()
-        .map(|(idx, choice)| VoteCount {
-            choice: choice.key.clone(),
-            count: counts[idx],
-        })
-        .collect();
-
-    let duration_total = start_total.elapsed();
-
-    info!(
-        "count_votes_33 - total {:?}, process: {:?}",
-        duration_total, duration_process
-    );
-
-    Ok(vote_counts)
-}
-
+//     Ok(vote_counts)
+// }
 
 #[allow(dead_code)]
 pub fn count_votes_34(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
-
     let start_total = Instant::now();
 
     // Step 2: Create a mapping from choice key to index
     let start_choice_mapping = Instant::now();
-    let mut choice_to_index: FxHashMap<u8, usize> = FxHashMap::with_capacity_and_hasher(
-        choices.len(),
-        Default::default(),
-    );
+    let mut choice_to_index: FxHashMap<u8, usize> =
+        FxHashMap::with_capacity_and_hasher(choices.len(), Default::default());
 
     for (idx, choice) in choices.iter().enumerate() {
         choice_to_index.insert(choice.key.as_bytes()[0], idx);
@@ -2420,23 +2321,19 @@ pub fn count_votes_34(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     // // Using u128 as key for better performance
     const RECORD_SIZE: usize = 33;
     let max_n_lines = data.len() / RECORD_SIZE + 1;
-    let mut seen: FxHashSet<u128> = FxHashSet::with_capacity_and_hasher(
-        max_n_lines,
-        Default::default(),
-    );
+    let mut seen: FxHashSet<u128> =
+        FxHashSet::with_capacity_and_hasher(max_n_lines, Default::default());
 
     // Initialize a counts vector
     let mut counts = vec![0u32; choices.len()];
 
     for line in data.chunks_exact(RECORD_SIZE).rev() {
-        let user_id_hash = u128::from_le_bytes(
-            line[..16].try_into().expect("Invalid user_id_hash length"),
-        );
-
+        let user_id_hash =
+            u128::from_le_bytes(line[..16].try_into().expect("Invalid user_id_hash length"));
 
         if let Some(_) = seen.replace(user_id_hash) {
             // this is not the voters latest vote
-            continue
+            continue;
         }
 
         if let Some(choice_idx) = choice_to_index.get(&line[31]) {
@@ -2447,7 +2344,8 @@ pub fn count_votes_34(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     let duration_process = start_process.elapsed();
 
     // Step 5: Convert counts to a vector of VoteCount
-    let vote_counts: Vec<VoteCount> = choices.iter()
+    let vote_counts: Vec<VoteCount> = choices
+        .iter()
         .enumerate()
         .map(|(idx, choice)| VoteCount {
             choice: choice.key.clone(),
@@ -2465,28 +2363,27 @@ pub fn count_votes_34(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
     Ok(vote_counts)
 }
 
-
-
-use crate::counting::utils::{make_choices_lookup, init_seen_hashset, user_id_hash_u128_from_bytes};
 use super::utils::indexed_counts_to_vote_counts;
+use crate::counting::utils::{
+    init_seen_hashset, make_choices_lookup, user_id_hash_u128_from_bytes,
+};
 const RECORD_SIZE: usize = 33;
 
 #[allow(dead_code)]
 pub fn count_votes_35(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>> {
-
     let choice_to_index = make_choices_lookup(choices);
-    let mut seen_users = init_seen_hashset(data);
+    let mut seen_voters = init_seen_hashset(data);
     let mut counts = vec![0u32; choices.len()];
 
     for line in data.chunks_exact(RECORD_SIZE).rev() {
         let user_id_hash = user_id_hash_u128_from_bytes(&line[..16]);
 
-        let is_latest_vote = seen_users.insert(user_id_hash);
+        let is_latest_vote = seen_voters.insert(user_id_hash);
         if !is_latest_vote {
-            continue
+            continue;
         }
 
-        let choice  = line[31];
+        let choice = line[31];
         if let Some(choice_idx) = choice_to_index.get(&choice) {
             counts[*choice_idx] += 1;
         }
@@ -2496,4 +2393,3 @@ pub fn count_votes_35(data: &[u8], choices: &[Choice]) -> Result<Vec<VoteCount>>
 
     Ok(vote_counts)
 }
-

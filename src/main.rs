@@ -1,37 +1,27 @@
-mod auth;
-mod counting;
-mod errors;
-mod handlers;
-mod models;
-mod utils;
-mod workers;
+use voterium_backend::{auth, handlers, models, utils};
 
 use actix_cors::Cors;
 use actix_web::middleware::from_fn;
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use dotenv::dotenv;
 use env_logger::Env;
-use models::AppState;
-use utils::{
-    load_backend_salt, load_cl_filepath, load_public_key, load_vl_filepath, load_voting_config,
-    spawn_count_worker, spawn_ledger_worker,
-};
-
-pub use crate::errors::{AppError, Result};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
-    let config = load_voting_config().await;
-    let cl_filepath = load_cl_filepath().await;
-    let vl_filepath = load_vl_filepath().await;
-    let state = AppState {
-        backend_salt: load_backend_salt().await,
-        decoding_key: load_public_key().await,
-        ledger_channel_sender: spawn_ledger_worker(&cl_filepath, &vl_filepath).await,
-        count_channel_sender: spawn_count_worker(config.choices.clone(), &cl_filepath).await,
+    let cl_filepath = utils::load_cl_filepath();
+    let vl_filepath = utils::load_vl_filepath();
+    let config_filepath = utils::load_config_filepath();
+
+    let config = utils::load_voting_config(&config_filepath);
+    
+    let state = models::AppState {
+        backend_salt: utils::load_backend_salt(),
+        decoding_key: utils::load_public_key(),
+        ledger_channel_sender: utils::spawn_ledger_worker(&cl_filepath, &vl_filepath).await,
+        count_channel_sender: utils::spawn_count_worker(config.choices.clone(), &cl_filepath).await,
         config,
     };
 

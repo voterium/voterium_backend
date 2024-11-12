@@ -1,8 +1,6 @@
-use chrono::{DateTime, Utc};
 use jsonwebtoken::DecodingKey;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
-
 use crate::counting::utils::user_id_hash_u128_from_bytes;
 
 #[derive(Deserialize)]

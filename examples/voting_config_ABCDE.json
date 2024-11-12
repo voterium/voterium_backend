@@ -1,0 +1,9 @@
+{
+  "choices": [
+    { "key": "A", "label": "Alice", "color": "#ffb3ba" },
+    { "key": "B", "label": "Bob", "color": "#baffc9" },
+    { "key": "C", "label": "Charlie", "color": "#bae1ff" },
+    { "key": "D", "label": "David", "color": "#ffdfba" },
+    { "key": "E", "label": "Eve", "color": "#ffbae1" }
+  ]
+}

@@ -1,13 +1,15 @@
+use crate::counting::utils::{
+    counts_from_latest_votes, indexed_counts_to_vote_counts, make_choices_lookup,
+    make_latest_votes_hashmap,
+};
+use crate::errors::Result;
+use crate::ledgers::load_cl;
+use crate::models::{Choice, CountWorkerBallot, CountWorkerMsg, LedgerWorkerMsg, VoteCount};
 use log::info;
 use rustc_hash::FxHashMap;
 use std::io::Write;
 use tokio::sync::mpsc::Receiver;
 
-use crate::counting::utils::{
-    counts_from_latest_votes, indexed_counts_to_vote_counts, make_choices_lookup,
-    make_latest_votes_hashmap, user_id_hash_u128_from_bytes,
-};
-use crate::errors::Result;
 
 pub async fn run_ledger_worker(
     mut rx: Receiver<LedgerWorkerMsg>,
@@ -38,9 +40,6 @@ pub async fn run_ledger_worker(
     }
 }
 
-use crate::counting::{count_votes, load_cl};
-use crate::models::{Choice, CountWorkerBallot, CountWorkerMsg, LedgerWorkerMsg, Vote, VoteCount};
-
 pub async fn run_counts_worker(
     mut rx: Receiver<CountWorkerMsg>,
     cl_filepath: impl AsRef<std::path::Path>,
@@ -66,7 +65,6 @@ pub async fn run_counts_worker(
     loop {
         let msg: CountWorkerMsg = rx.recv().await.expect("Should receive task not error");
         match msg {
-
             CountWorkerMsg::Vote { ballot } => {
                 add_vote(
                     &ballot,
@@ -77,7 +75,8 @@ pub async fn run_counts_worker(
             }
 
             CountWorkerMsg::GetCounts { resp } => {
-                resp.send(vote_counts.clone()).expect("Should send response");
+                resp.send(vote_counts.clone())
+                    .expect("Should send response");
             }
         }
     }

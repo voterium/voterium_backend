@@ -12,7 +12,6 @@ use actix_web::{
 const PUBLIC_PATHS: &'static [&str] = &[
     "/voting/config", 
     "/voting/results",
-    "/voting/results2",
 ];
 
 pub async fn jwt_middleware<B>(

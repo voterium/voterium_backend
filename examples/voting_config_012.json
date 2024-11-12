@@ -1,0 +1,7 @@
+{
+    "choices": [
+      { "key": "0", "label": "Alice", "color": "#ffb3ba" },
+      { "key": "1", "label": "Bob", "color": "#baffc9" },
+      { "key": "2", "label": "Charlie", "color": "#bae1ff" }
+    ]
+  }

@@ -42,8 +42,8 @@ pub fn gen_random_b64_string(length: usize) -> String {
     URL_SAFE_NO_PAD.encode(&random_bytes)
 }
 
-pub async fn load_voting_config() -> Config {
-    let mut file = File::open("voting_config.json").expect("Failed to open voting_config.json");
+pub fn load_voting_config(filepath: &str) -> Config {
+    let mut file = File::open(filepath).expect("Failed to open voting_config.json");
     let mut contents = String::new();
     file.read_to_string(&mut contents)
         .expect("Failed to read voting_config.json");
@@ -67,7 +67,7 @@ pub fn validate_unique_choice_keys(choices: &[Choice]) -> () {
     }
 }
 
-pub async fn load_backend_salt() -> Vec<u8> {
+pub fn load_backend_salt() -> Vec<u8> {
     // Get the backend salt from the environment variable
     let backend_salt = env::var("BACKEND_SALT").expect("BACKEND_SALT must be set");
     let backend_salt = URL_SAFE_NO_PAD
@@ -79,7 +79,7 @@ pub async fn load_backend_salt() -> Vec<u8> {
     backend_salt
 }
 
-pub async fn load_public_key() -> DecodingKey {
+pub fn load_public_key() -> DecodingKey {
     let jwt_public_key_path = env::var("JWT_PUBLIC_KEY_PATH").unwrap_or("key.pub".to_string());
     let public_key_pem =
         fs::read_to_string(jwt_public_key_path).expect("Failed to read public key");
@@ -88,14 +88,19 @@ pub async fn load_public_key() -> DecodingKey {
     decoding_key
 }
 
-pub async fn load_cl_filepath() -> String {
+pub fn load_cl_filepath() -> String {
     let cl_filepath = env::var("CL_FILEPATH").unwrap_or("cl.csv".to_string());
     cl_filepath
 }
 
-pub async fn load_vl_filepath() -> String {
+pub fn load_vl_filepath() -> String {
     let vl_filepath = env::var("VL_FILEPATH").unwrap_or("vl.csv".to_string());
     vl_filepath
+}
+
+pub fn load_config_filepath() -> String {
+    let config_filepath = env::var("CONFIG_FILEPATH").unwrap_or("voting_config.json".to_string());
+    config_filepath
 }
 
 pub async fn spawn_ledger_worker(

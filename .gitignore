@@ -3,5 +3,9 @@
 *.pub
 *.db
 *.env
-*.jsonl
 *.csv
+*.json
+*.jsonl
+
+# Test Files
+!examples/*

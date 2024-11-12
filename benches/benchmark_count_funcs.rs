@@ -3,39 +3,19 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use voterium_backend::counting::counting_funcs::{
     count_votes_01, count_votes_03, count_votes_04, count_votes_06, count_votes_08, count_votes_10,
     count_votes_11, count_votes_12, count_votes_13, count_votes_14, count_votes_15, count_votes_16,
-    count_votes_17, count_votes_18, count_votes_19, count_votes_20, count_votes_21, count_votes_22,
-    count_votes_23, count_votes_24, count_votes_25, count_votes_26, count_votes_27, count_votes_28,
-    count_votes_29, count_votes_30, count_votes_31, count_votes_32, count_votes_33, count_votes_34,
-    count_votes_35,
+    count_votes_18, count_votes_19, count_votes_20, count_votes_22, count_votes_23, count_votes_24,
+    count_votes_25, count_votes_26, count_votes_27, count_votes_28, count_votes_29, count_votes_30,
+    count_votes_31, count_votes_34, count_votes_35,
 };
 
-use voterium_backend::counting::load_cl;
-use voterium_backend::models::Choice;
-
-fn make_input() -> Vec<Choice> {
-    vec![
-        Choice {
-            key: "0".to_string(),
-            label: "Choice 0".to_string(),
-            color: "#FF0000".to_string(),
-        },
-        Choice {
-            key: "1".to_string(),
-            label: "Choice 1".to_string(),
-            color: "#FF0000".to_string(),
-        },
-        Choice {
-            key: "2".to_string(),
-            label: "Choice 2".to_string(),
-            color: "#FF0000".to_string(),
-        },
-    ]
-}
+use voterium_backend::ledgers::load_cl;
+use voterium_backend::utils::load_voting_config;
 
 fn benchmark_functions(c: &mut Criterion) {
     let mut group = c.benchmark_group("Function Versions");
-    let input = make_input();
-    let data = load_cl("cl_1M_int.csv").unwrap();
+    let config = load_voting_config("examples/voting_config_012.json");
+    let choices = config.choices;   
+    let data = load_cl("examples/cl_1M.csv").unwrap();
 
     // group.bench_function("count_votes_01", |b| b.iter(|| count_votes_01(&data)));
 
@@ -155,16 +135,16 @@ fn benchmark_functions(c: &mut Criterion) {
     //     b.iter(|| count_votes_32(black_box(&data), black_box(&input)))
     // });
 
-    group.bench_function("count_votes_33", |b| {
-        b.iter(|| count_votes_33(black_box(&data), black_box(&input)))
-    });
+    // group.bench_function("count_votes_33", |b| {
+    //     b.iter(|| count_votes_33(black_box(&data), black_box(&input)))
+    // });
 
     group.bench_function("count_votes_34", |b| {
-        b.iter(|| count_votes_34(black_box(&data), black_box(&input)))
+        b.iter(|| count_votes_34(black_box(&data), black_box(&choices)))
     });
 
     group.bench_function("count_votes_35", |b| {
-        b.iter(|| count_votes_35(black_box(&data), black_box(&input)))
+        b.iter(|| count_votes_35(black_box(&data), black_box(&choices)))
     });
 
     group.finish();
